@@ -1,0 +1,11 @@
+{
+  "name": "朝食の書き出し",
+  "short_name": "朝食書き出し",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f1ea",
+  "theme_color": "#8a3b12",
+  "lang": "ja",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

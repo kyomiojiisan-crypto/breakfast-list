@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8a3b12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="朝食の書き出し">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%2296%22%20fill%3D%22%238a3b12%22/%3E%3Ctext%20x%3D%22256%22%20y%3D%22330%22%20font-size%3D%22260%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%20font-family%3D%22sans-serif%22%3E%E6%9C%9D%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%2296%22%20fill%3D%22%238a3b12%22/%3E%3Ctext%20x%3D%22256%22%20y%3D%22330%22%20font-size%3D%22260%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%20font-family%3D%22sans-serif%22%3E%E6%9C%9D%3C/text%3E%3C/svg%3E">
+<title>朝食の書き出し</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --card: #fff;
+    --ink: #1c1915;
+    --muted: #665e54;
+    --line: #e6e0d6;
+    --accent: #8a3b12;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  input, select, textarea { font-size: 16px; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  h1 { font-size: 1.15rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 0; }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 96px; }
+  section {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border: 1px solid var(--line);
+  }
+  h2 { font-size: 1rem; margin: 0 0 10px; }
+  label { display: block; font-size: .8rem; color: var(--muted); margin: 8px 0 4px; }
+  input, select, textarea, button {
+    font: inherit;
+    width: 100%;
+  }
+  input, select, textarea {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #fff;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 88px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .row .day { font-weight: 600; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button {
+    border: 0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.secondary { background: #ece7df; color: var(--ink); }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  button:disabled { opacity: .55; cursor: wait; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .8rem; }
+  td input { padding: 6px 8px; }
+  .qty { width: 100%; max-width: 110px; }
+  .hint { color: var(--muted); font-size: .82rem; margin: 6px 0 0; }
+  .status { font-size: .88rem; margin: 8px 0 0; }
+  .status.ok { color: #166534; }
+  .status.err { color: #9a3412; }
+  .status.busy { color: #854d0e; }
+  .chip {
+    display: inline-block;
+    background: #f0e9df;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: .75rem;
+    color: var(--muted);
+    margin: 2px 4px 2px 0;
+  }
+  .chip.staple { background: #e8f0e4; color: #3d5a2e; }
+  .missing { color: #9a3412; }
+  details summary { cursor: pointer; font-weight: 600; }
+  #ocrResultBox { display: none; margin-top: 10px; }
+  #ocrResultBox.show { display: block; }
+  #printArea { display: none; }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .staple-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px 10px;
+    margin-top: 8px;
+  }
+  .staple-grid label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: .9rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .staple-grid input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+  .uses-cell { font-weight: 600; white-space: nowrap; }
+  @media print {
+    body { background: #fff; }
+    header, .no-print, details { display: none !important; }
+    main { max-width: none; padding: 0; }
+    section { border: 0; padding: 0; margin: 0; }
+    #screenList { display: none !important; }
+    #printArea { display: block !important; }
+    h1.print-title { font-size: 18pt; margin-bottom: 8px; }
+    table { font-size: 12pt; }
+    th, td { border-bottom: 1px solid #999; padding: 6px 4px; }
+  }
+</style>
+</head>
+<body>
+<header class="no-print">
+  <h1>朝食の書き出し</h1>
+  <p class="sub">買うのは朝食とお汁の具だけ（昼・夕は対象外）</p>
+</header>
+<main>
+  <section class="no-print">
+    <h2>人数</h2>
+    <label for="headCount">人数（買い物量の基準・既定18）</label>
+    <input type="number" id="headCount" min="1" step="1" value="18" inputmode="numeric">
+    <p class="hint">ゼリー等は頭の中で調整してください。買い物量はこの人数÷18で増減します。</p>
+  </section>
+
+  <section class="no-print">
+    <h2>朝食メニューの写真から読む</h2>
+    <p class="hint">メニュー表は朝食の欄だけ写して撮ってください。昼・夕が入ると誤読しやすいです。初回だけネットが必要です。</p>
+    <input type="file" id="menuPhotoAlbum" class="visually-hidden" accept="image/*" tabindex="-1">
+    <input type="file" id="menuPhotoCamera" class="visually-hidden" accept="image/*" capture="environment" tabindex="-1">
+    <div class="btns" style="margin-top:0">
+      <button type="button" id="btnPhotoCamera">写真を撮る</button>
+      <button type="button" class="secondary" id="btnPhotoAlbum">アルバムから選ぶ</button>
+    </div>
+    <p id="ocrStatus" class="status" hidden></p>
+    <p class="hint">うまく読めない・オフラインのときは、Googleレンズ等で文字をコピーしてメニュー欄に貼ってもよい。</p>
+    <div id="ocrResultBox">
+      <label for="ocrLines">読み取り結果（編集可・1行1料理または日付つき）</label>
+      <textarea id="ocrLines" rows="8" placeholder="例:&#10;月 卵焼き、味噌汁&#10;火 肉じゃが"></textarea>
+      <p id="ocrMatchedHint" class="hint"></p>
+      <div class="btns">
+        <button type="button" id="btnOcrToMenu">読み取った料理を下のメニューに入れる</button>
+        <button type="button" class="secondary" id="btnOcrRematch">候補を再照合</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="no-print">
+    <h2>1. 今週の朝食メニュー</h2>
+    <p class="hint">朝食の料理名だけ入れてください（味噌汁などのお汁の具も含む）。昼・夕は買いません。候補から選んでも手打ちでも可。</p>
+    <div id="menuDays"></div>
+    <div class="btns">
+      <button type="button" id="btnMake">書き出す</button>
+      <button type="button" class="secondary" id="btnSample">例を入れる</button>
+      <button type="button" class="ghost" id="btnClear">メニューを消す</button>
+    </div>
+    <p class="hint">「書き出す」で、上の人数ぶんの買い物リストが出ます（既定18人）。材料ごとに何回使うか（回数）も出ます。</p>
+  </section>
+
+  <section id="screenList" class="no-print" hidden>
+    <h2>2. 買い物リスト</h2>
+    <p class="hint">回数はメニューでその材料を使う回数です。目安の量は人数から出しています。量が不確かでも回数は役に立ちます。店の人に渡す前に数字を直してください。</p>
+    <div id="unknownBox" hidden></div>
+    <table>
+      <thead>
+        <tr><th>材料</th><th>回数</th><th>目安</th><th>使う日</th><th></th></tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+    <div class="btns">
+      <button type="button" id="btnPrint">印刷・PDF用に開く</button>
+      <button type="button" class="secondary" id="btnCopy">文字でコピー</button>
+    </div>
+  </section>
+
+  <section class="no-print" id="stapleSection">
+    <h2>よく買う食材（手でチェック）</h2>
+    <p class="hint">補助リストです。初回はここで定番にチェックしておくと毎週楽。書き出し時、メニューにない定番は回数「手選び」で追加されます（量は要確認）。</p>
+    <div class="staple-grid" id="stapleGrid"></div>
+  </section>
+
+  <section class="no-print">
+    <details>
+      <summary>材料マスター（料理 → 材料）</summary>
+      <p class="hint">グループホーム用の初期データです。足りない料理は下に追記できます。この端末に保存されます。</p>
+      <label>JSON（上級者向け）</label>
+      <textarea id="masterEdit" spellcheck="false"></textarea>
+      <div class="btns">
+        <button type="button" class="secondary" id="btnSaveMaster">マスターを保存</button>
+        <button type="button" class="ghost" id="btnResetMaster">初期に戻す</button>
+      </div>
+    </details>
+  </section>
+
+  <div id="printArea">
+    <h1 class="print-title">朝食・お汁 買い物リスト</h1>
+    <p id="printMeta"></p>
+    <table>
+      <thead><tr><th>☐</th><th>材料</th><th>回数</th><th>買う量</th><th>メモ</th></tr></thead>
+      <tbody id="printBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+// スマホ・ブラウザ互換: structuredClone が無い古い端末、localStorage が使えない環境でも動くように
+if (typeof structuredClone !== "function") {
+  window.structuredClone = function (v) { return JSON.parse(JSON.stringify(v)); };
+}
+(function () {
+  try { var k = "__t"; localStorage.setItem(k, "1"); localStorage.removeItem(k); }
+  catch (e) {
+    var mem = {};
+    try {
+      Object.defineProperty(window, "localStorage", { configurable: true, value: {
+        getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
+        setItem: function (k, v) { mem[k] = String(v); },
+        removeItem: function (k) { delete mem[k]; }
+      }});
+    } catch (e2) {}
+  }
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const DAYS = [
+  { key: "mon", label: "月" },
+  { key: "tue", label: "火" },
+  { key: "wed", label: "水" },
+  { key: "thu", label: "木" },
+  { key: "fri", label: "金" },
+  { key: "sat", label: "土" },
+  { key: "sun", label: "日" }
+];
+
+const BASE_HEADCOUNT = 18;
+
+const STAPLE_ITEMS = [
+  "玉ねぎ", "じゃがいも", "人参", "キャベツ", "白菜", "もやし",
+  "ブロッコリー", "ほうれん草", "ねぎ", "きゅうり", "トマト", "レタス",
+  "かぼちゃ", "大根", "豆腐", "納豆", "卵", "牛乳",
+  "食パン", "ご飯用米", "ウインナー", "豚肉", "鶏肉", "バナナ",
+  "ヨーグルト", "わかめ", "油揚げ", "きのこ", "ピーマン", "ごぼう"
+];
+
+// unit: g | 個 | 玉 | 袋 | 本 | 丁 | 枚 | パック | 缶 | 切れ
+// per values are calibrated for BASE_HEADCOUNT (18人)
+const DEFAULT_MASTER = {
+  "ボイルウインナー": [
+    { name: "ウインナー", unit: "本", per: 6, packHint: "1パック" }
+  ],
+  "かぼちゃの煮付け": [
+    { name: "かぼちゃ", unit: "g", per: 400, packHint: "1/4個程度" }
+  ],
+  "肉じゃが": [
+    { name: "じゃがいも", unit: "個", per: 4 },
+    { name: "玉ねぎ", unit: "玉", per: 1 },
+    { name: "人参", unit: "本", per: 1 },
+    { name: "豚肉", unit: "g", per: 200 }
+  ],
+  "味噌汁": [
+    { name: "味噌", unit: "g", per: 40, packHint: "常備なら不要" },
+    { name: "豆腐", unit: "丁", per: 0.5 },
+    { name: "わかめ", unit: "g", per: 5, packHint: "常備なら不要" },
+    { name: "ねぎ", unit: "本", per: 0.3 }
+  ],
+  "もやし炒め": [
+    { name: "もやし", unit: "袋", per: 1 },
+    { name: "油揚げ", unit: "枚", per: 1 }
+  ],
+  "卵焼き": [
+    { name: "卵", unit: "個", per: 4 }
+  ],
+  "納豆ご飯": [
+    { name: "納豆", unit: "パック", per: 4 },
+    { name: "ご飯用米", unit: "g", per: 0, packHint: "常備なら不要" }
+  ],
+  "トースト": [
+    { name: "食パン", unit: "枚", per: 4 },
+    { name: "バター", unit: "g", per: 20, packHint: "常備なら不要" }
+  ],
+  "サラダ": [
+    { name: "レタス", unit: "玉", per: 0.5 },
+    { name: "きゅうり", unit: "本", per: 1 },
+    { name: "トマト", unit: "個", per: 2 }
+  ],
+  "ハンバーグ": [
+    { name: "合挽き肉", unit: "g", per: 300 },
+    { name: "玉ねぎ", unit: "玉", per: 1 },
+    { name: "卵", unit: "個", per: 1 },
+    { name: "パン粉", unit: "g", per: 40, packHint: "常備なら不要" }
+  ],
+  "煮魚": [
+    { name: "サバまたはホッケ", unit: "切れ", per: 4 }
+  ],
+  "ヨーグルト": [
+    { name: "ヨーグルト", unit: "個", per: 4 }
+  ],
+  "バナナ": [
+    { name: "バナナ", unit: "本", per: 4 }
+  ],
+  "ほうれん草のおひたし": [
+    { name: "ほうれん草", unit: "袋", per: 1 }
+  ],
+  "野菜スープ": [
+    { name: "玉ねぎ", unit: "玉", per: 0.5 },
+    { name: "人参", unit: "本", per: 0.5 },
+    { name: "キャベツ", unit: "枚", per: 2 }
+  ],
+  "スクランブルエッグ": [
+    { name: "卵", unit: "個", per: 4 }
+  ],
+  "ホットケーキ": [
+    { name: "ホットケーキミックス", unit: "g", per: 200, packHint: "1袋程度" },
+    { name: "卵", unit: "個", per: 2 },
+    { name: "牛乳", unit: "ml", per: 200 }
+  ],
+  "鮭の塩焼き": [
+    { name: "鮭", unit: "切れ", per: 4 }
+  ],
+  "きんぴらごぼう": [
+    { name: "ごぼう", unit: "本", per: 1 },
+    { name: "人参", unit: "本", per: 0.5 }
+  ],
+  "コロッケ": [
+    { name: "じゃがいも", unit: "個", per: 4 },
+    { name: "合挽き肉", unit: "g", per: 100 },
+    { name: "玉ねぎ", unit: "玉", per: 0.5 }
+  ],
+  "フルーツ": [
+    { name: "バナナ", unit: "本", per: 2 },
+    { name: "りんご", unit: "個", per: 2 }
+  ],
+  "お茶漬け": [
+    { name: "お茶漬けの素", unit: "袋", per: 4, packHint: "常備なら不要" }
+  ],
+  "すまし汁": [
+    { name: "豆腐", unit: "丁", per: 0.3 },
+    { name: "わかめ", unit: "g", per: 5, packHint: "常備なら不要" },
+    { name: "ねぎ", unit: "本", per: 0.2 }
+  ],
+  "お吸い物": [
+    { name: "三つ葉", unit: "束", per: 0.3 },
+    { name: "かまぼこ", unit: "本", per: 0.3 }
+  ]
+};
+
+const STORE_KEY = "kaimono-kakidashi-v1";
+const DAY_LABEL_RE = /([月火水木金土日])(?:曜(?:日)?)?/;
+
+function loadMaster() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY + "-master");
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return structuredClone(DEFAULT_MASTER);
+}
+
+function saveMaster(m) {
+  localStorage.setItem(STORE_KEY + "-master", JSON.stringify(m));
+}
+
+function dishNames(master) {
+  return Object.keys(master).sort((a, b) => a.localeCompare(b, "ja"));
+}
+
+function getHeadCount() {
+  const n = Number(document.getElementById("headCount").value);
+  return Number.isFinite(n) && n > 0 ? n : BASE_HEADCOUNT;
+}
+
+function saveHeadcount() {
+  localStorage.setItem(STORE_KEY + "-head", JSON.stringify({
+    count: getHeadCount()
+  }));
+}
+
+function loadHeadcount() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY + "-head") || "null");
+    if (raw) {
+      // migrate: prefer count, else old normal field
+      const v = raw.count != null ? raw.count : raw.normal;
+      if (v != null) document.getElementById("headCount").value = v;
+    }
+  } catch (e) {}
+}
+
+function loadStapleChecks() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY + "-staples") || "null");
+    return raw && typeof raw === "object" ? raw : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveStapleChecks() {
+  const state = {};
+  document.querySelectorAll("#stapleGrid input[type=checkbox]").forEach(cb => {
+    if (cb.checked) state[cb.value] = true;
+  });
+  localStorage.setItem(STORE_KEY + "-staples", JSON.stringify(state));
+}
+
+function getCheckedStaples() {
+  return [...document.querySelectorAll("#stapleGrid input[type=checkbox]:checked")].map(cb => cb.value);
+}
+
+function buildStapleUI() {
+  const grid = document.getElementById("stapleGrid");
+  const saved = loadStapleChecks();
+  grid.innerHTML = "";
+  STAPLE_ITEMS.forEach((name, i) => {
+    const id = "staple-" + i;
+    const label = document.createElement("label");
+    label.htmlFor = id;
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = id;
+    cb.value = name;
+    cb.checked = !!saved[name];
+    cb.addEventListener("change", saveStapleChecks);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(name));
+    grid.appendChild(label);
+  });
+}
+
+function buildMenuUI() {
+  const box = document.getElementById("menuDays");
+  const saved = {};
+  box.querySelectorAll("input[data-day]").forEach(inp => {
+    saved[inp.dataset.day] = inp.value;
+  });
+  box.innerHTML = "";
+  const names = dishNames(master);
+  const datalist = document.createElement("datalist");
+  datalist.id = "dishList";
+  names.forEach(n => {
+    const o = document.createElement("option");
+    o.value = n;
+    datalist.appendChild(o);
+  });
+  box.appendChild(datalist);
+
+  DAYS.forEach(d => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<div class="day">${d.label}</div>
+      <input list="dishList" data-day="${d.key}" placeholder="例: 肉じゃが、味噌汁" autocomplete="off">`;
+    box.appendChild(row);
+    const inp = row.querySelector("input");
+    if (saved[d.key]) inp.value = saved[d.key];
+  });
+}
+
+function parseDishes(text) {
+  return text
+    .split(/[、,・\/／\s]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function roundNice(n) {
+  if (n <= 0) return 0;
+  if (n < 1) return Math.round(n * 10) / 10;
+  if (n < 5) return Math.round(n * 2) / 2;
+  if (n < 20) return Math.round(n);
+  if (n < 100) return Math.round(n / 5) * 5;
+  return Math.round(n / 10) * 10;
+}
+
+function formatQty(name, unit, total, uses, packHint) {
+  if (unit === "玉") {
+    const v = Math.max(1, Math.round(total * 0.65));
+    return `${v}玉`;
+  }
+  if (unit === "袋" || unit === "パック" || unit === "丁" || unit === "本" || unit === "個" || unit === "枚" || unit === "切れ" || unit === "束") {
+    const v = Math.max(1, Math.ceil(total));
+    return `${v}${unit}`;
+  }
+  if (unit === "g" || unit === "ml") {
+    if (packHint && total <= 0) return packHint;
+    return `${roundNice(total)}${unit}`;
+  }
+  return `${roundNice(total)}${unit || ""}`;
+}
+
+function aggregate(menuByDay) {
+  const map = new Map();
+  const unknown = [];
+  const scale = getHeadCount() / BASE_HEADCOUNT;
+  DAYS.forEach(d => {
+    const raw = menuByDay[d.key] || "";
+    parseDishes(raw).forEach(dish => {
+      const recipe = master[dish];
+      if (!recipe) {
+        unknown.push({ day: d.label, dish });
+        return;
+      }
+      recipe.forEach(ing => {
+        const key = ing.name;
+        if (!map.has(key)) {
+          map.set(key, {
+            name: ing.name,
+            unit: ing.unit,
+            total: 0,
+            uses: 0,
+            days: [],
+            packHint: ing.packHint || "",
+            fromMenu: true,
+            staple: false
+          });
+        }
+        const row = map.get(key);
+        row.total += (Number(ing.per) || 0) * scale;
+        row.uses += 1;
+        if (!row.days.includes(d.label)) row.days.push(d.label);
+        if (ing.packHint) row.packHint = ing.packHint;
+      });
+    });
+  });
+
+  // merge checked staples
+  const checked = getCheckedStaples();
+  checked.forEach(name => {
+    if (map.has(name)) {
+      map.get(name).staple = true;
+    } else {
+      map.set(name, {
+        name,
+        unit: "",
+        total: 0,
+        uses: 0,
+        days: [],
+        packHint: "",
+        fromMenu: false,
+        staple: true,
+        handPick: true
+      });
+    }
+  });
+
+  const items = [...map.values()].map(r => {
+    let qty;
+    let usesLabel;
+    let note = "";
+    if (r.handPick) {
+      qty = "要確認";
+      usesLabel = "手選び";
+      note = "定番・量は要確認";
+    } else {
+      qty = formatQty(r.name, r.unit, r.total, r.uses, r.packHint);
+      usesLabel = String(r.uses);
+      if (r.packHint && r.total === 0) note = r.packHint;
+      else if (r.uses >= 2) note = `${r.uses}回分`;
+      if (r.staple) note = (note ? note + "・" : "") + "定番";
+    }
+    return {
+      ...r,
+      qty,
+      usesLabel,
+      note
+    };
+  });
+  items.sort((a, b) => {
+    // hand-pick staples after menu items, but keep Japanese name sort within groups
+    if (!!a.handPick !== !!b.handPick) return a.handPick ? 1 : -1;
+    return a.name.localeCompare(b.name, "ja");
+  });
+  return { items, unknown };
+}
+
+let master = loadMaster();
+let currentItems = [];
+
+function renderList(result) {
+  const section = document.getElementById("screenList");
+  const body = document.getElementById("listBody");
+  const unknownBox = document.getElementById("unknownBox");
+  section.hidden = false;
+  body.innerHTML = "";
+  currentItems = result.items;
+
+  if (result.unknown && result.unknown.length) {
+    unknownBox.hidden = false;
+    unknownBox.innerHTML = `<p class="missing">マスターにない料理: ${
+      result.unknown.map(u => `${u.day}「${u.dish}」`).join("、")
+    }。下の材料マスターに追加するか、手でリストへ足してください。</p>`;
+  } else {
+    unknownBox.hidden = true;
+    unknownBox.innerHTML = "";
+  }
+
+  result.items.forEach((item, idx) => {
+    const tr = document.createElement("tr");
+    const chips = item.days.map(d => `<span class="chip">${d}</span>`).join("");
+    const stapleChip = item.staple ? `<span class="chip staple">定番</span>` : "";
+    tr.innerHTML = `
+      <td>${item.name}${stapleChip ? " " + stapleChip : ""}</td>
+      <td class="uses-cell">${item.usesLabel}</td>
+      <td><input class="qty" data-i="${idx}" value="${item.qty}"></td>
+      <td>${chips || (item.handPick ? '<span class="chip">手選び</span>' : "")}</td>
+      <td><button type="button" class="ghost" data-del="${idx}" style="width:auto;padding:6px 10px">削除</button></td>`;
+    body.appendChild(tr);
+  });
+}
+
+function readMenu() {
+  const out = {};
+  document.querySelectorAll("#menuDays input[data-day]").forEach(inp => {
+    out[inp.dataset.day] = inp.value;
+  });
+  return out;
+}
+
+function makeList() {
+  saveHeadcount();
+  saveStapleChecks();
+  const result = aggregate(readMenu());
+  renderList(result);
+  localStorage.setItem(STORE_KEY + "-menu", JSON.stringify(readMenu()));
+}
+
+function syncQtyFromInputs() {
+  document.querySelectorAll("#listBody input.qty").forEach(inp => {
+    const i = Number(inp.dataset.i);
+    if (currentItems[i]) currentItems[i].qty = inp.value.trim();
+  });
+}
+
+function fillPrint() {
+  syncQtyFromInputs();
+  const meta = document.getElementById("printMeta");
+  const today = new Date();
+  const count = getHeadCount();
+  meta.textContent =
+    `作成日 ${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}　` +
+    `人数${count}人　朝食とお汁の具のみ・週1回買い物用`;
+  const body = document.getElementById("printBody");
+  body.innerHTML = "";
+  currentItems.forEach(item => {
+    const tr = document.createElement("tr");
+    const memo = item.note || "";
+    tr.innerHTML = `<td>☐</td><td>${item.name}</td><td>${item.usesLabel}</td><td>${item.qty}</td><td>${memo}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+/** Fuzzy: exact key, or line includes dish name (prefer longer names) */
+function matchDishesInText(text) {
+  const names = dishNames(master).slice().sort((a, b) => b.length - a.length);
+  const found = [];
+  const seen = new Set();
+  const lines = String(text).split(/\r?\n/);
+  lines.forEach(line => {
+    const cleaned = line.replace(/\s+/g, "");
+    if (!cleaned) return;
+    names.forEach(name => {
+      if (seen.has(name)) return;
+      if (cleaned.includes(name) || line.includes(name)) {
+        found.push(name);
+        seen.add(name);
+      }
+    });
+  });
+  const whole = String(text).replace(/\s+/g, "");
+  names.forEach(name => {
+    if (seen.has(name)) return;
+    if (whole.includes(name)) {
+      found.push(name);
+      seen.add(name);
+    }
+  });
+  return found;
+}
+
+function parseOcrIntoByDay(text) {
+  const byDay = {};
+  DAYS.forEach(d => { byDay[d.key] = []; });
+  const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let hasDayMarker = false;
+  let currentKey = null;
+
+  lines.forEach(line => {
+    const m = line.match(DAY_LABEL_RE);
+    let rest = line;
+    if (m) {
+      hasDayMarker = true;
+      const label = m[1];
+      const day = DAYS.find(d => d.label === label);
+      if (day) currentKey = day.key;
+      rest = line.slice(m.index + m[0].length).replace(/^[\s:：\-・]+/, "");
+    }
+    const dishes = matchDishesInText(rest.length ? rest : line);
+    if (!dishes.length) return;
+    if (currentKey) {
+      dishes.forEach(d => {
+        if (!byDay[currentKey].includes(d)) byDay[currentKey].push(d);
+      });
+    }
+  });
+
+  return { byDay, hasDayMarker, allMatched: matchDishesInText(text) };
+}
+
+function setOcrStatus(msg, kind) {
+  const el = document.getElementById("ocrStatus");
+  el.hidden = !msg;
+  el.textContent = msg || "";
+  el.className = "status" + (kind ? " " + kind : "");
+}
+
+function updateOcrMatchedHint() {
+  const text = document.getElementById("ocrLines").value;
+  const matched = matchDishesInText(text);
+  const hint = document.getElementById("ocrMatchedHint");
+  if (!text.trim()) {
+    hint.textContent = "";
+    return;
+  }
+  if (matched.length) {
+    hint.textContent = `マスターと一致した候補: ${matched.join("、")}`;
+  } else {
+    hint.textContent = "マスターと一致する料理名がまだ見つかりません。行を直すか、マスターに追加してください。";
+  }
+}
+
+let ocrBusy = false;
+
+async function runOcr(file) {
+  if (typeof Tesseract === "undefined") {
+    setOcrStatus(
+      "文字認識ライブラリを読み込めませんでした（オフラインの可能性）。Googleレンズ等で文字をコピーしてメニュー欄に貼ってもよい。",
+      "err"
+    );
+    document.getElementById("ocrResultBox").classList.add("show");
+    return;
+  }
+  ocrBusy = true;
+  document.getElementById("btnPhotoCamera").disabled = true;
+  document.getElementById("btnPhotoAlbum").disabled = true;
+  setOcrStatus("読み取り中…（初回は言語データのダウンロードで時間がかかることがあります）", "busy");
+  document.getElementById("ocrResultBox").classList.add("show");
+  try {
+    const result = await Tesseract.recognize(file, "jpn", {
+      logger: m => {
+        if (m.status === "recognizing text" && m.progress != null) {
+          setOcrStatus(`読み取り中… ${Math.round(m.progress * 100)}%`, "busy");
+        } else if (m.status) {
+          setOcrStatus(`読み取り中…（${m.status}）`, "busy");
+        }
+      }
+    });
+    const raw = (result && result.data && result.data.text) ? result.data.text : "";
+    const lines = raw
+      .split(/\r?\n/)
+      .map(l => l.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    document.getElementById("ocrLines").value = lines.join("\n");
+    updateOcrMatchedHint();
+    const matched = matchDishesInText(lines.join("\n"));
+    if (matched.length) {
+      setOcrStatus(`読み取り完了。候補 ${matched.length} 件。内容を直してから「下のメニューに入れる」を押してください。`, "ok");
+    } else {
+      setOcrStatus(
+        "読み取りはできましたが、マスターと一致する料理名が見つかりません。テキストを直すか、Googleレンズ等でコピーして貼ってもよい。",
+        "err"
+      );
+    }
+  } catch (e) {
+    console.error(e);
+    setOcrStatus(
+      "読み取りに失敗しました。ネット接続を確認するか、Googleレンズ等で文字をコピーしてメニュー欄に貼ってもよい。",
+      "err"
+    );
+  } finally {
+    ocrBusy = false;
+    document.getElementById("btnPhotoCamera").disabled = false;
+    document.getElementById("btnPhotoAlbum").disabled = false;
+  }
+}
+
+function applyOcrToMenu() {
+  const text = document.getElementById("ocrLines").value;
+  const { byDay, hasDayMarker, allMatched } = parseOcrIntoByDay(text);
+
+  if (!allMatched.length) {
+    alert("マスターと一致する料理がありません。読み取り結果を直すか、手でメニュー欄に入れてください。");
+    return;
+  }
+
+  if (hasDayMarker) {
+    const anyFilled = DAYS.some(d => byDay[d.key].length);
+    if (anyFilled) {
+      DAYS.forEach(d => {
+        const inp = document.querySelector(`#menuDays input[data-day="${d.key}"]`);
+        if (!inp) return;
+        if (byDay[d.key].length) {
+          inp.value = byDay[d.key].join("、");
+        }
+      });
+      alert("曜日つきでメニュー欄に入れました。足りない日は手で直してください。");
+      return;
+    }
+  }
+
+  const joined = allMatched.join("、");
+  const useConfirm = confirm(
+    "曜日の目印（月〜日）が見つかりませんでした。\n\nOK: 一致した料理を「月」の欄にまとめて入れます（あとで他の日へ振り分けてください）\nキャンセル: 読み取り結果の編集だけ続けます"
+  );
+  if (useConfirm) {
+    const mon = document.querySelector('#menuDays input[data-day="mon"]');
+    if (mon) mon.value = joined;
+    const helper =
+      `【振り分け用】下の行に料理を分けてから、もう一度「メニューに入れる」を押してください\n` +
+      DAYS.map(d => `${d.label} ${d.key === "mon" ? joined : ""}`).join("\n");
+    document.getElementById("ocrLines").value = helper;
+    updateOcrMatchedHint();
+    alert("月曜欄にまとめました。読み取り結果に曜日テンプレを出したので、分けて再実行もできます。");
+  }
+}
+
+function onPhotoSelected(input) {
+  const file = input.files && input.files[0];
+  // reset so same file can be re-picked
+  input.value = "";
+  if (!file) return;
+  runOcr(file);
+}
+
+document.getElementById("btnMake").onclick = makeList;
+document.getElementById("btnSample").onclick = () => {
+  const sample = {
+    mon: "卵焼き、味噌汁",
+    tue: "ボイルウインナー、サラダ",
+    wed: "肉じゃが、味噌汁",
+    thu: "トースト、ヨーグルト",
+    fri: "もやし炒め、納豆ご飯",
+    sat: "かぼちゃの煮付け、味噌汁",
+    sun: "ハンバーグ、野菜スープ"
+  };
+  document.querySelectorAll("#menuDays input[data-day]").forEach(inp => {
+    inp.value = sample[inp.dataset.day] || "";
+  });
+};
+document.getElementById("btnClear").onclick = () => {
+  document.querySelectorAll("#menuDays input[data-day]").forEach(inp => { inp.value = ""; });
+};
+document.getElementById("btnPrint").onclick = () => {
+  fillPrint();
+  window.print();
+};
+document.getElementById("btnCopy").onclick = async () => {
+  syncQtyFromInputs();
+  const count = getHeadCount();
+  const lines = currentItems.map(i =>
+    `・${i.name}　回数${i.usesLabel}　${i.qty}${i.note ? "（" + i.note + "）" : ""}`
+  );
+  const text = [
+    "【朝食・お汁 買い物リスト】",
+    `人数${count}人`,
+    ...lines
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("コピーしました");
+  } catch (e) {
+    prompt("コピーしてください", text);
+  }
+};
+document.getElementById("listBody").addEventListener("click", e => {
+  const btn = e.target.closest("[data-del]");
+  if (!btn) return;
+  const i = Number(btn.dataset.del);
+  syncQtyFromInputs();
+  currentItems.splice(i, 1);
+  renderList({ items: currentItems, unknown: [] });
+});
+
+document.getElementById("headCount").addEventListener("change", saveHeadcount);
+document.getElementById("headCount").addEventListener("input", saveHeadcount);
+
+document.getElementById("btnPhotoCamera").addEventListener("click", () => {
+  if (ocrBusy) return;
+  document.getElementById("menuPhotoCamera").click();
+});
+document.getElementById("btnPhotoAlbum").addEventListener("click", () => {
+  if (ocrBusy) return;
+  document.getElementById("menuPhotoAlbum").click();
+});
+document.getElementById("menuPhotoCamera").addEventListener("change", e => onPhotoSelected(e.target));
+document.getElementById("menuPhotoAlbum").addEventListener("change", e => onPhotoSelected(e.target));
+
+document.getElementById("ocrLines").addEventListener("input", updateOcrMatchedHint);
+document.getElementById("btnOcrToMenu").onclick = applyOcrToMenu;
+document.getElementById("btnOcrRematch").onclick = updateOcrMatchedHint;
+
+document.getElementById("masterEdit").value = JSON.stringify(master, null, 2);
+document.getElementById("btnSaveMaster").onclick = () => {
+  try {
+    master = JSON.parse(document.getElementById("masterEdit").value);
+    saveMaster(master);
+    buildMenuUI();
+    updateOcrMatchedHint();
+    alert("保存しました");
+  } catch (e) {
+    alert("JSONの形が正しくありません");
+  }
+};
+document.getElementById("btnResetMaster").onclick = () => {
+  master = structuredClone(DEFAULT_MASTER);
+  saveMaster(master);
+  document.getElementById("masterEdit").value = JSON.stringify(master, null, 2);
+  buildMenuUI();
+  updateOcrMatchedHint();
+};
+
+loadHeadcount();
+buildStapleUI();
+buildMenuUI();
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY + "-menu") || "null");
+  if (saved) {
+    document.querySelectorAll("#menuDays input[data-day]").forEach(inp => {
+      inp.value = saved[inp.dataset.day] || "";
+    });
+  }
+} catch (e) {}
+</script>
+</body>
+</html>
