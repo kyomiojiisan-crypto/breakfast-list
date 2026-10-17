@@ -93,6 +93,37 @@
   #removedBox li span { flex: 1; }
   #removedBox li button, #btnResetEdits { width: auto; padding: 6px 10px; font-size: .85rem; }
   .list-opts label.inline { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--ink); font-size: .85rem; }
+  /* 汁物 */
+  .soup-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; background: #fffdf9; }
+  .soup-head { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; align-items: end; }
+  .soup-head label { margin-top: 0; }
+  .soup-head button { width: auto; padding: 10px 10px; }
+  .stepper { display: grid; grid-template-columns: 34px 1fr 34px; gap: 4px; }
+  .stepper button { width: 34px; padding: 8px 0; }
+  .stepper input { text-align: center; padding: 8px 4px; }
+  .gu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 6px; }
+  .gu-grid label { display: flex; align-items: center; gap: 6px; margin: 0; padding: 7px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font-size: .88rem; background: #fff; }
+  .gu-grid label.on { background: #fbe9dc; border-color: #e3b896; }
+  .gu-grid input { width: auto; margin: 0; accent-color: var(--accent); }
+  table.gu-amt { margin-top: 8px; font-size: .88rem; }
+  table.gu-amt td, table.gu-amt th { padding: 5px 4px; }
+  table.gu-amt input { width: 5.2em; padding: 5px 6px; }
+  table.soup-days { margin-top: 8px; font-size: .85rem; }
+  table.soup-days td, table.soup-days th { padding: 4px 3px; vertical-align: middle; }
+  table.soup-days td:first-child { white-space: nowrap; font-weight: 600; width: 3.6em; }
+  .day-gu { display: inline-flex; align-items: center; gap: 3px; margin: 2px 6px 2px 0; font-size: .82rem; color: var(--ink); }
+  .day-gu input { width: auto; margin: 0; accent-color: var(--accent); }
+  .soup-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: .85rem; }
+  .soup-sub select { width: auto; padding: 6px 8px; }
+  .soup-sub button { width: auto; padding: 6px 10px; font-size: .8rem; }
+  .soup-summary { font-weight: 600; margin: 6px 0 0; }
+  #soupInfo { margin: 6px 0; }
+  .chip.soup { background: #e3f1f1; color: #1f5f5f; }
+  .soup-custom-row { display: grid; grid-template-columns: 1fr 76px 76px; gap: 6px; }
+  #soupCustomList { list-style: none; padding: 0; margin: 6px 0 0; }
+  #soupCustomList li { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: .88rem; }
+  #soupCustomList li span { flex: 1; }
+  #soupCustomList li button { width: auto; padding: 3px 9px; font-size: .78rem; }
   @media (max-width: 560px) {
     #screenList table { table-layout: fixed; }
     #screenList th:nth-child(1) { width: 31%; }
@@ -229,10 +260,45 @@
     <p class="hint">「書き出す」で、上の人数ぶんの買い物リストが出ます（既定18人）。材料ごとに何回使うか（回数）も出ます。</p>
   </section>
 
+  <section class="no-print" id="soupSection" data-feature="soup">
+    <h2>1-2. 汁物（日数と具）</h2>
+    <p class="hint">①汁物ごとに作る日数を入れる → ②入れたい具を選ぶ（いくつでも） → ③選んだ具を日ごとに順番に割り当てます（1日に入れる具は既定2つ・1〜3で変更可）。日ごとの具は下の表で直せます。</p>
+    <p class="hint" data-feature="soup-rotation"><b>計算のしかた：</b>具ごとの量 ＝ その具を使う日数 × 1人分 × 人数。調味料（味噌・だし等）＝ 日数 × 1人分 × 人数。日数はいつも<b>ここに入力した日数</b>で計算します。</p>
+    <div id="soupRows"></div>
+    <div class="btns">
+      <button type="button" class="secondary" data-add-soup="味噌汁" style="width:auto">＋味噌汁</button>
+      <button type="button" class="secondary" data-add-soup="すまし汁" style="width:auto">＋すまし汁</button>
+      <button type="button" class="secondary" data-add-soup="中華スープ" style="width:auto">＋中華スープ</button>
+      <button type="button" class="secondary" data-add-soup="" style="width:auto">＋ほかの汁物</button>
+    </div>
+    <div class="list-opts">
+      <label class="inline" for="soupIncludeBase">
+        <input type="checkbox" id="soupIncludeBase" checked>
+        調味料（味噌・だしの素・鶏がらスープの素など）もリストに入れる
+      </label>
+    </div>
+    <p class="soup-summary" id="soupSummary"></p>
+    <p id="soupMismatch" class="status busy" hidden></p>
+    <p class="hint">二重に数えないルール：ここで日数を1日以上にした汁物と同じ名前の料理（例：味噌汁・お吸い物→すまし汁）がメニューや写真の読み取りにあっても、メニュー側では数えません。日数0の汁物は、今まで通りメニューから数えます。</p>
+    <datalist id="soupTypeList"><option value="味噌汁"><option value="すまし汁"><option value="中華スープ"><option value="豚汁"><option value="コンソメスープ"><option value="野菜スープ"></datalist>
+    <details>
+      <summary>具の候補を追加・管理</summary>
+      <p class="hint">候補にない具を足せます。単位と「1単位のおよその重さ(g)」から量を計算します（単位がgなら重さは1）。</p>
+      <div class="soup-custom-row">
+        <input type="text" id="soupGuName" placeholder="具の名前（例: 里芋）" autocomplete="off">
+        <select id="soupGuUnit"><option>g</option><option>個</option><option>本</option><option>袋</option><option>パック</option><option>枚</option><option>丁</option><option>束</option></select>
+        <input type="number" id="soupGuGram" placeholder="g/単位" min="1" step="1" inputmode="numeric">
+      </div>
+      <div class="btns"><button type="button" id="btnSoupGuAdd">具の候補に追加</button></div>
+      <ul id="soupCustomList"></ul>
+    </details>
+  </section>
+
   <section id="screenList" class="no-print" hidden>
     <h2>2. 買い物リスト</h2>
     <p class="hint">回数はメニューでその材料を使う回数です。目安の量は人数から出しています。量が不確かでも回数は役に立ちます。店の人に渡す前に数字を直してください。</p>
     <div id="unknownBox" hidden></div>
+    <div id="soupInfo" hidden></div>
     <p class="hint" data-feature="row-edit">材料名・量はその場で直せます。いらない材料は「削除」。直した内容はこの献立のあいだ覚えておき、もう一度「書き出す」を押しても、開き直しても残ります。</p>
     <table>
       <thead>
@@ -612,9 +678,15 @@ function aggregate(menuByDay) {
   const map = new Map();
   const unknown = [];
   const scale = getHeadCount() / BASE_HEADCOUNT;
+  const soupActive = new Set(activeSoupRows().map(r => soupKey(r.type)));
+  const skippedSoups = [];
   DAYS.forEach(d => {
     const raw = menuByDay[d.key] || "";
     parseDishes(raw).forEach(dish => {
+      if (soupActive.has(soupKey(dish))) {
+        skippedSoups.push(`${d.label} ${dish}`);
+        return;
+      }
       const recipe = master[dish];
       if (!recipe) {
         unknown.push({ day: d.label, dish });
@@ -644,6 +716,26 @@ function aggregate(menuByDay) {
       });
     });
   });
+
+  // 汁物欄の材料を合算（同じ名前・同じ単位なら1行にまとめる）
+  soupContributions().forEach(sc => {
+    let key = sc.name;
+    if (map.has(key) && map.get(key).unit !== sc.unit) key = sc.name + "（汁物）";
+    if (!map.has(key)) {
+      map.set(key, {
+        name: key, unit: sc.unit, total: 0, uses: 0, days: [], packHint: sc.packHint || "",
+        fromMenu: false, staple: false, dishes: []
+      });
+    }
+    const row = map.get(key);
+    row.total += sc.total;
+    row.uses += sc.uses;
+    row.soupUses = (row.soupUses || 0) + sc.uses;
+    row.soupTypes = row.soupTypes || [];
+    if (!row.soupTypes.includes(sc.soup)) row.soupTypes.push(sc.soup);
+    if (sc.packHint && !row.packHint) row.packHint = sc.packHint;
+  });
+  lastSoupInfo = { summary: soupSummaryText(), skipped: skippedSoups, mismatch: soupMismatchText() };
 
   // merge checked staples
   const manualNames = new Set(loadManualItems().map(m => m.name));
@@ -680,6 +772,7 @@ function aggregate(menuByDay) {
       if (r.packHint && r.total === 0) note = r.packHint;
       else if (r.uses >= 2) note = `${r.uses}回分`;
       if (r.staple) note = (note ? note + "・" : "") + "定番";
+      if (r.soupTypes && r.soupTypes.length) note = (note ? note + "・" : "") + "汁物:" + r.soupTypes.join("/");
     }
     return {
       ...r,
@@ -713,8 +806,259 @@ function aggregate(menuByDay) {
   return { items: kept, unknown };
 }
 
+// ---- 汁物（日数と具） ----
+// 1人分の具の合計（g）。メインの具が複数なら、これを等分する（合計が増えすぎないように）
+const SOUP_SOLIDS_PER_PERSON = 40;
+// accent あり=少量で足りる具（ねぎ・わかめ・油揚げ・きのこ等）は1人分を固定。それ以外はその日の具の数で1人分を分ける
+const SOUP_GU_DEFAULT = [
+  { name: "大根", unit: "本", g: 900 },
+  { name: "人参", unit: "本", g: 150 },
+  { name: "玉ねぎ", unit: "玉", g: 200 },
+  { name: "キャベツ", unit: "枚", g: 50 },
+  { name: "白菜", unit: "枚", g: 100 },
+  { name: "じゃがいも", unit: "個", g: 150 },
+  { name: "油揚げ", unit: "枚", g: 30, accent: 5 },
+  { name: "豆腐", unit: "丁", g: 300 },
+  { name: "しめじ", unit: "パック", g: 100, accent: 10 },
+  { name: "えのき", unit: "袋", g: 100, accent: 10 },
+  { name: "なめこ", unit: "袋", g: 100, accent: 10 },
+  { name: "もやし", unit: "袋", g: 200 },
+  { name: "ほうれん草", unit: "袋", g: 200 },
+  { name: "小松菜", unit: "袋", g: 200 },
+  { name: "ごぼう", unit: "本", g: 150 },
+  { name: "かぼちゃ", unit: "g", g: 1 },
+  { name: "卵", unit: "個", g: 50 },
+  { name: "かまぼこ", unit: "本", g: 150, accent: 8 },
+  { name: "ねぎ", unit: "本", g: 100, accent: 3 },
+  { name: "わかめ", unit: "g", g: 1, accent: 0.7 },
+  { name: "三つ葉", unit: "束", g: 50, accent: 1 },
+  { name: "麩", unit: "g", g: 1, accent: 1 }
+];
+// 汁物の調味料（1人分）
+const SOUP_BASE = {
+  "味噌汁": [{ name: "味噌", unit: "g", perPerson: 12 }, { name: "だしの素", unit: "g", perPerson: 1 }],
+  "すまし汁": [{ name: "だしの素", unit: "g", perPerson: 1 }, { name: "薄口しょうゆ", unit: "ml", perPerson: 4 }],
+  "中華スープ": [{ name: "鶏がらスープの素", unit: "g", perPerson: 2 }],
+  "豚汁": [{ name: "味噌", unit: "g", perPerson: 12 }, { name: "だしの素", unit: "g", perPerson: 1 }],
+  "コンソメスープ": [{ name: "コンソメ", unit: "g", perPerson: 2 }]
+};
+const SOUP_DEFAULT_GU = {
+  "味噌汁": ["豆腐", "わかめ", "ねぎ"],
+  "すまし汁": ["豆腐", "三つ葉"],
+  "中華スープ": ["卵", "ねぎ", "わかめ"],
+  "豚汁": ["大根", "人参", "ごぼう", "ねぎ"]
+};
+const SOUP_ALIAS = { "みそ汁": "味噌汁", "お味噌汁": "味噌汁", "お吸い物": "すまし汁", "吸い物": "すまし汁" };
+const SOUP_DISH_RE = /(汁|スープ|吸い物)$/;
+function soupKey(name) {
+  const n = String(name || "").trim();
+  return SOUP_ALIAS[n] || n;
+}
+function loadSoupState() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY + "-soups") || "null");
+    if (raw && Array.isArray(raw.rows)) {
+      raw.custom = Array.isArray(raw.custom) ? raw.custom : [];
+      raw.includeBase = raw.includeBase !== false;
+      return raw;
+    }
+  } catch (e) {}
+  return {
+    rows: ["味噌汁", "すまし汁", "中華スープ"].map(t => newSoupRow(t)),
+    custom: [],
+    includeBase: true
+  };
+}
+function newSoupRow(type) {
+  return { id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type: type || "", count: 0, gu: (SOUP_DEFAULT_GU[type] || []).slice(), per: {}, perDay: 2, days: {} };
+}
+let soupState = null;
+function saveSoupState() {
+  localStorage.setItem(STORE_KEY + "-soups", JSON.stringify(soupState));
+}
+function soupCatalog() {
+  const list = SOUP_GU_DEFAULT.map(x => ({ ...x }));
+  (soupState.custom || []).forEach(c => {
+    if (!list.some(x => x.name === c.name)) list.push({ ...c, custom: true });
+  });
+  return list;
+}
+function guInfo(name) {
+  return soupCatalog().find(x => x.name === name) || { name, unit: "g", g: 1 };
+}
+function soupPerDay(row) {
+  const k = Number(row.perDay) || 2;
+  return Math.min(3, Math.max(1, k));
+}
+// 1人分(g)の自動値：その日の具の数（既定2つ）で SOUP_SOLIDS_PER_PERSON を分ける。ねぎ・わかめ等の添えは固定の少量
+function soupAutoPer(row, name) {
+  const info = guInfo(name);
+  if (info.accent) return info.accent;
+  return Math.round((SOUP_SOLIDS_PER_PERSON / soupPerDay(row)) * 10) / 10;
+}
+// 日ごとの具：選んだ具を順番に k 個ずつ割り当て（ローテーション）。手で直した日はその内容を使う
+function soupAutoDay(row, i) {
+  const gu = row.gu;
+  if (!gu.length) return [];
+  const k = Math.min(soupPerDay(row), gu.length);
+  const out = [];
+  for (let j = 0; j < k; j++) out.push(gu[(i * k + j) % gu.length]);
+  return out;
+}
+function soupDayPlan(row) {
+  const n = Math.max(0, Math.round(Number(row.count) || 0));
+  const plan = [];
+  for (let i = 0; i < n; i++) {
+    const ov = row.days && row.days[i];
+    plan.push(Array.isArray(ov) ? ov.filter(g => row.gu.includes(g)) : soupAutoDay(row, i));
+  }
+  return plan;
+}
+function soupDaysUsed(row) {
+  const used = {};
+  row.gu.forEach(g => { used[g] = 0; });
+  soupDayPlan(row).forEach(day => day.forEach(g => { used[g] = (used[g] || 0) + 1; }));
+  return used;
+}
+function soupPer(row, name) {
+  const o = row.per && row.per[name];
+  return (o !== undefined && o !== "" && Number(o) >= 0) ? Number(o) : soupAutoPer(row, name);
+}
+function activeSoupRows() {
+  return (soupState ? soupState.rows : []).filter(r => r.type.trim() && Number(r.count) > 0);
+}
+function soupSummaryText() {
+  const rows = activeSoupRows();
+  if (!rows.length) return "";
+  const days = rows.reduce((a, r) => a + Number(r.count), 0);
+  return `汁物（${rows.map(r => `${r.type.trim()}×${Number(r.count)}`).join("・")}）計${days}回`;
+}
+// 汁物から出る材料（名前・単位・合計・回数）。単位は材料マスターと同じにしてあるので、リストで合算されます
+function soupContributions() {
+  const head = getHeadCount();
+  const out = [];
+  activeSoupRows().forEach(r => {
+    const c = Number(r.count);
+    const used = soupDaysUsed(r);
+    r.gu.forEach(name => {
+      const days = used[name] || 0;
+      if (!days) return;
+      const info = guInfo(name);
+      const grams = soupPer(r, name) * head * days;
+      let total = grams / (info.g || 1);
+      if (info.unit === "玉") total = total / 0.65; // formatQty の「玉」補正を打ち消す
+      out.push({ name, unit: info.unit, total, uses: days, soup: r.type.trim(), base: false, grams });
+    });
+    if (soupState.includeBase) {
+      (SOUP_BASE[soupKey(r.type)] || []).forEach(b => {
+        out.push({ name: b.name, unit: b.unit, total: b.perPerson * head * c, uses: c, soup: r.type.trim(), base: true, packHint: "常備なら不要" });
+      });
+    }
+  });
+  return out;
+}
+function fmtGuTotal(info, grams) {
+  let total = grams / (info.g || 1);
+  if (info.unit === "玉") total = total / 0.65;
+  const q = formatQty(info.name, info.unit, total, 1, "");
+  return info.unit === "g" ? q : `${q}（約${roundNice(grams)}g）`;
+}
+function renderSoupUI() {
+  const box = document.getElementById("soupRows");
+  const cat = soupCatalog();
+  const head = getHeadCount();
+  box.innerHTML = "";
+  soupState.rows.forEach((r, ri) => {
+    const card = document.createElement("div");
+    card.className = "soup-card";
+    card.dataset.row = ri;
+    const c = Number(r.count) || 0;
+    const guChecks = cat.map(g => {
+      const on = r.gu.includes(g.name);
+      return `<label class="${on ? "on" : ""}"><input type="checkbox" data-gu="${escHtml(g.name)}" ${on ? "checked" : ""}>${escHtml(g.name)}</label>`;
+    }).join("");
+    const used = soupDaysUsed(r);
+    const amtRows = r.gu.map(name => {
+      const info = guInfo(name);
+      const per = soupPer(r, name);
+      const auto = soupAutoPer(r, name);
+      const ov = r.per && r.per[name] !== undefined && r.per[name] !== "";
+      const days = used[name] || 0;
+      const total = days > 0 ? fmtGuTotal(info, per * head * days) : "—";
+      return `<tr><td>${escHtml(name)}</td><td>${days}日</td>
+        <td><input type="number" min="0" step="0.5" inputmode="decimal" data-per="${escHtml(name)}" value="${ov ? escHtml(r.per[name]) : ""}" placeholder="${auto}"> g</td>
+        <td>${escHtml(total)}</td></tr>`;
+    }).join("");
+    const plan = soupDayPlan(r);
+    const dayRows = plan.map((day, di) => {
+      const edited = r.days && Array.isArray(r.days[di]);
+      const boxes = r.gu.map(g => `<label class="day-gu"><input type="checkbox" data-day-i="${di}" data-day-gu="${escHtml(g)}" ${day.includes(g) ? "checked" : ""}>${escHtml(g)}</label>`).join("");
+      return `<tr><td>${di + 1}日目${edited ? "＊" : ""}</td><td>${boxes}</td></tr>`;
+    }).join("");
+    const perDaySel = [1, 2, 3].map(k => `<option value="${k}" ${soupPerDay(r) === k ? "selected" : ""}>${k}つ</option>`).join("");
+    card.innerHTML = `
+      <div class="soup-head">
+        <div><label>汁物の種類</label><input type="text" list="soupTypeList" data-type value="${escHtml(r.type)}" placeholder="例: 豚汁"></div>
+        <div><label>日数（回）</label>
+          <div class="stepper"><button type="button" class="secondary" data-step="-1">−</button><input type="number" min="0" step="1" inputmode="numeric" data-count value="${c}"><button type="button" class="secondary" data-step="1">＋</button></div></div>
+        <button type="button" class="ghost" data-remove-soup title="この汁物を消す">消す</button>
+      </div>
+      <label>具を選ぶ（いくつでも）</label>
+      <div class="gu-grid">${guChecks}</div>
+      ${r.gu.length ? `
+      <div class="soup-sub">1日に入れる具：<select data-perday>${perDaySel}</select>
+        ${r.days && Object.keys(r.days).length ? `<button type="button" class="ghost" data-reset-days>日ごとの具を自動に戻す</button>` : ""}</div>
+      ${c > 0 ? `<table class="soup-days"><thead><tr><th>日</th><th>その日の具（タップで直せます。＊=手で直した日）</th></tr></thead><tbody>${dayRows}</tbody></table>` : `<p class="hint">日数を入れると、日ごとの具の割り当てが出ます。</p>`}
+      <table class="gu-amt"><thead><tr><th>具</th><th>使う日</th><th>1人分（空欄=自動）</th><th>${head}人分の量</th></tr></thead><tbody>${amtRows}</tbody></table>` : `<p class="hint">具がまだ選ばれていません。</p>`}`;
+    box.appendChild(card);
+  });
+  document.getElementById("soupIncludeBase").checked = !!soupState.includeBase;
+  const sum = soupSummaryText();
+  document.getElementById("soupSummary").textContent = sum ? `今の設定：${sum}（${head}人分）` : "今の設定：汁物欄は使っていません（メニューの汁物から数えます）";
+  const mm = soupMismatchText();
+  const mmEl = document.getElementById("soupMismatch");
+  mmEl.hidden = !mm;
+  mmEl.textContent = mm;
+  const ul = document.getElementById("soupCustomList");
+  ul.innerHTML = "";
+  (soupState.custom || []).forEach(cu => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${escHtml(cu.name)}（${escHtml(cu.unit)}${cu.unit === "g" ? "" : "・1" + escHtml(cu.unit) + "≈" + escHtml(cu.g) + "g"}）</span>`;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "ghost"; b.textContent = "候補から外す"; b.dataset.rmCustom = cu.name;
+    li.appendChild(b);
+    ul.appendChild(li);
+  });
+}
+function soupChanged() {
+  saveSoupState();
+  renderSoupUI();
+  if (!document.getElementById("screenList").hidden) refreshListKeepingEdits();
+}
+// メニュー（写真の読み取り含む）の汁物の回数と、入力した日数が違うときの注意
+function menuSoupCounts() {
+  const menu = readMenu();
+  const counts = {};
+  DAYS.forEach(d => parseDishes(menu[d.key] || "").forEach(dish => {
+    if (!SOUP_DISH_RE.test(dish) && !SOUP_ALIAS[dish]) return;
+    const k = soupKey(dish);
+    counts[k] = (counts[k] || 0) + 1;
+  }));
+  return counts;
+}
+function soupMismatchText() {
+  const mc = menuSoupCounts();
+  const parts = [];
+  activeSoupRows().forEach(r => {
+    const k = soupKey(r.type);
+    const m = mc[k] || 0;
+    if (m && m !== Number(r.count)) parts.push(`${r.type.trim()}：メニュー${m}回／入力${Number(r.count)}日`);
+  });
+  return parts.length ? `メニューの回数と違います（${parts.join("、")}）。入力した日数で計算しています。` : "";
+}
 // ---- この献立での修正（削除・名前変更・量変更） ----
 let currentPlanSig = "";
+let lastSoupInfo = { summary: "", skipped: [] };
 function planSignature(menuByDay) {
   return DAYS.map(d => parseDishes((menuByDay || {})[d.key] || "").join(",")).join("|");
 }
@@ -958,6 +1302,7 @@ function renderList(result) {
     const chips = item.days.map(d => `<span class="chip">${d}</span>`).join("");
     const stapleChip = item.staple ? `<span class="chip staple">定番</span>` : "";
     const manualChip = item.manual ? `<span class="chip manual">追加</span>` : "";
+    const soupChip = item.soupUses ? `<span class="chip soup">汁×${item.soupUses}</span>` : "";
     const editedChip = item.edited ? `<span class="chip edited">修正</span>` : "";
     const origNote = (!item.manual && item.autoName && item.name !== item.autoName)
       ? `<small class="orig-name">元: ${escHtml(item.autoName)}</small>` : "";
@@ -965,10 +1310,20 @@ function renderList(result) {
       <td><input class="nm" data-i="${idx}" value="${escHtml(item.name)}" aria-label="材料名">${origNote}${stapleChip ? " " + stapleChip : ""}${editedChip ? " " + editedChip : ""}</td>
       <td class="uses-cell">${escHtml(item.usesLabel)}</td>
       <td><input class="qty" data-i="${idx}" value="${escHtml(item.qty)}"></td>
-      <td>${chips || manualChip || (item.handPick ? '<span class="chip">手選び</span>' : "")}</td>
+      <td>${chips}${soupChip}${(!chips && !soupChip) ? (manualChip || (item.handPick ? '<span class="chip">手選び</span>' : "")) : ""}</td>
       <td><button type="button" class="ghost" data-del="${idx}" style="width:auto;padding:6px 10px">削除</button></td>`;
     body.appendChild(tr);
   });
+  const si = document.getElementById("soupInfo");
+  if (lastSoupInfo.summary) {
+    si.hidden = false;
+    si.innerHTML = `<p class="hint"><b>${escHtml(lastSoupInfo.summary)}</b> を含みます（回数の「汁×n」）。` +
+      (lastSoupInfo.skipped.length ? `メニューの汁物（${escHtml(lastSoupInfo.skipped.join("、"))}）は汁物欄で数えているので、二重には数えていません。` : "") +
+      (lastSoupInfo.mismatch ? ` ${escHtml(lastSoupInfo.mismatch)}` : "") + `</p>`;
+  } else {
+    si.hidden = true;
+    si.innerHTML = "";
+  }
   renderRemovedBox();
 }
 
@@ -1031,7 +1386,8 @@ function fillPrint() {
   const count = getHeadCount();
   meta.textContent =
     `作成日 ${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}　` +
-    `人数${count}人　朝食とお汁の具のみ・週1回買い物用`;
+    `人数${count}人　朝食とお汁の具のみ・週1回買い物用` +
+    (lastSoupInfo.summary ? `　${lastSoupInfo.summary}` : "");
   const body = document.getElementById("printBody");
   body.innerHTML = "";
   currentItems.forEach(item => {
@@ -1255,6 +1611,7 @@ document.getElementById("btnCopy").onclick = async () => {
   const text = [
     "【朝食・お汁 買い物リスト】",
     `人数${count}人`,
+    ...(lastSoupInfo.summary ? [lastSoupInfo.summary] : []),
     ...lines
   ].join("\n");
   try {
@@ -1348,6 +1705,7 @@ document.getElementById("btnResetMaster").onclick = () => {
   updateOcrMatchedHint();
 };
 
+soupState = loadSoupState();
 loadHeadcount();
 buildStapleUI();
 buildMenuUI();
@@ -1368,6 +1726,96 @@ document.getElementById("manualQty").addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); addManualItem(); }
 });
 buildManualDatalist();
+renderSoupUI();
+const soupBox = document.getElementById("soupRows");
+soupBox.addEventListener("click", e => {
+  const card = e.target.closest(".soup-card");
+  if (!card) return;
+  const r = soupState.rows[Number(card.dataset.row)];
+  const step = e.target.closest("[data-step]");
+  if (step) {
+    r.count = Math.max(0, (Number(r.count) || 0) + Number(step.dataset.step));
+    soupChanged();
+    return;
+  }
+  if (e.target.closest("[data-reset-days]")) {
+    r.days = {};
+    soupChanged();
+    return;
+  }
+  if (e.target.closest("[data-remove-soup]")) {
+    if (confirm(`「${r.type || "汁物"}」を消しますか？`)) {
+      soupState.rows.splice(Number(card.dataset.row), 1);
+      soupChanged();
+    }
+  }
+});
+soupBox.addEventListener("change", e => {
+  const card = e.target.closest(".soup-card");
+  if (!card) return;
+  const r = soupState.rows[Number(card.dataset.row)];
+  const t = e.target;
+  if (t.matches("[data-type]")) {
+    const before = r.type;
+    r.type = t.value.trim();
+    if (!before && !r.gu.length && SOUP_DEFAULT_GU[soupKey(r.type)]) r.gu = SOUP_DEFAULT_GU[soupKey(r.type)].slice();
+  } else if (t.matches("[data-count]")) {
+    r.count = Math.max(0, Math.round(Number(t.value) || 0));
+  } else if (t.matches("[data-gu]")) {
+    const name = t.dataset.gu;
+    if (t.checked) { if (!r.gu.includes(name)) r.gu.push(name); }
+    else { r.gu = r.gu.filter(n => n !== name); if (r.per) delete r.per[name]; }
+    r.days = {}; // 具の組み合わせが変わったら、日ごとの割り当ては自動に戻す
+  } else if (t.matches("[data-perday]")) {
+    r.perDay = Number(t.value);
+    r.days = {};
+  } else if (t.matches("[data-day-gu]")) {
+    const di = Number(t.dataset.dayI);
+    const cur = soupDayPlan(r)[di] || [];
+    let next = t.checked ? [...cur, t.dataset.dayGu] : cur.filter(g => g !== t.dataset.dayGu);
+    next = r.gu.filter(g => next.includes(g));
+    r.days = r.days || {};
+    r.days[di] = next;
+  } else if (t.matches("[data-per]")) {
+    r.per = r.per || {};
+    if (t.value === "") delete r.per[t.dataset.per]; else r.per[t.dataset.per] = Math.max(0, Number(t.value));
+  } else return;
+  soupChanged();
+});
+document.querySelectorAll("[data-add-soup]").forEach(b => b.addEventListener("click", () => {
+  soupState.rows.push(newSoupRow(b.dataset.addSoup));
+  soupChanged();
+  const cards = document.querySelectorAll(".soup-card");
+  const last = cards[cards.length - 1];
+  if (last) { last.scrollIntoView({ block: "center" }); if (!b.dataset.addSoup) last.querySelector("[data-type]").focus(); }
+}));
+document.getElementById("soupIncludeBase").addEventListener("change", e => {
+  soupState.includeBase = e.target.checked;
+  soupChanged();
+});
+document.getElementById("btnSoupGuAdd").addEventListener("click", () => {
+  const name = document.getElementById("soupGuName").value.trim();
+  const unit = document.getElementById("soupGuUnit").value;
+  let g = Number(document.getElementById("soupGuGram").value);
+  if (!name) { alert("具の名前を入れてください。"); return; }
+  if (unit === "g") g = 1;
+  if (!(g > 0)) { alert("1単位のおよその重さ(g)を入れてください。"); return; }
+  if (soupCatalog().some(x => x.name === name)) { alert("すでに候補にあります。"); return; }
+  soupState.custom.push({ name, unit, g });
+  document.getElementById("soupGuName").value = "";
+  document.getElementById("soupGuGram").value = "";
+  soupChanged();
+});
+document.getElementById("soupCustomList").addEventListener("click", e => {
+  const b = e.target.closest("[data-rm-custom]");
+  if (!b) return;
+  const name = b.dataset.rmCustom;
+  soupState.custom = soupState.custom.filter(c => c.name !== name);
+  soupState.rows.forEach(r => { r.gu = r.gu.filter(n => n !== name); if (r.per) delete r.per[name]; });
+  soupChanged();
+});
+document.getElementById("headCount").addEventListener("change", () => renderSoupUI());
+document.getElementById("menuDays").addEventListener("change", () => renderSoupUI());
 // 自分で追加した材料があれば、開き直したときもリストを出しておく
 if (loadManualItems().length || loadAllEdits().plans[planSignature(readMenu())]) {
   renderList(aggregate(readMenu()));
