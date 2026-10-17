@@ -82,6 +82,30 @@
   th { color: var(--muted); font-weight: 600; font-size: .8rem; }
   td input { padding: 6px 8px; }
   .qty { width: 100%; max-width: 110px; }
+  td input.nm { min-width: 6.5em; border-color: transparent; background: #faf8f4; padding: 6px 6px; }
+  td input.nm:focus { border-color: var(--line); background: #fff; }
+  .orig-name { display: block; font-size: .72rem; color: var(--muted); }
+  .chip.edited { background: #fdf0d5; color: #7a4b00; }
+  #removedBox { margin-top: 10px; background: #faf6ef; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; }
+  #removedBox summary { font-size: .9rem; }
+  #removedBox ul { list-style: none; padding: 0; margin: 8px 0 0; }
+  #removedBox li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+  #removedBox li span { flex: 1; }
+  #removedBox li button, #btnResetEdits { width: auto; padding: 6px 10px; font-size: .85rem; }
+  .list-opts label.inline { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--ink); font-size: .85rem; }
+  @media (max-width: 560px) {
+    #screenList table { table-layout: fixed; }
+    #screenList th:nth-child(1) { width: 31%; }
+    #screenList th:nth-child(2) { width: 11%; }
+    #screenList th:nth-child(3) { width: 24%; }
+    #screenList th:nth-child(4) { width: 15%; }
+    #screenList th:nth-child(5) { width: 19%; }
+    #screenList th, #screenList td { padding: 6px 3px; }
+    #screenList td input.nm, #screenList td input.qty { min-width: 0; width: 100%; max-width: none; padding: 6px 5px; }
+    #screenList td button[data-del] { padding: 6px 4px !important; width: 100% !important; white-space: nowrap; font-size: .8rem; }
+    #screenList .chip { padding: 1px 5px; margin: 1px 2px 1px 0; }
+  }
+  .list-opts label.inline input { width: auto; margin: 0; accent-color: var(--accent); }
   .hint { color: var(--muted); font-size: .82rem; margin: 6px 0 0; }
   .status { font-size: .88rem; margin: 8px 0 0; }
   .status.ok { color: #166534; }
@@ -209,12 +233,24 @@
     <h2>2. 買い物リスト</h2>
     <p class="hint">回数はメニューでその材料を使う回数です。目安の量は人数から出しています。量が不確かでも回数は役に立ちます。店の人に渡す前に数字を直してください。</p>
     <div id="unknownBox" hidden></div>
+    <p class="hint" data-feature="row-edit">材料名・量はその場で直せます。いらない材料は「削除」。直した内容はこの献立のあいだ覚えておき、もう一度「書き出す」を押しても、開き直しても残ります。</p>
     <table>
       <thead>
         <tr><th>材料</th><th>回数</th><th>目安</th><th>使う日</th><th></th></tr>
       </thead>
       <tbody id="listBody"></tbody>
     </table>
+    <div class="list-opts">
+      <label class="inline" for="delFromMaster">
+        <input type="checkbox" id="delFromMaster">
+        削除したとき、その料理のレシピ（材料マスター）からも外す（次の献立でも出なくなります）
+      </label>
+    </div>
+    <details id="removedBox" hidden>
+      <summary>削除した材料（<span id="removedCount">0</span>件）・元に戻す</summary>
+      <ul id="removedList"></ul>
+      <div class="btns"><button type="button" class="ghost" id="btnResetEdits">この献立の修正をすべて元に戻す</button></div>
+    </details>
     <div class="btns">
       <button type="button" id="btnPrint">印刷・PDF用に開く</button>
       <button type="button" class="secondary" id="btnCopy">文字でコピー</button>
@@ -595,10 +631,12 @@ function aggregate(menuByDay) {
             days: [],
             packHint: ing.packHint || "",
             fromMenu: true,
-            staple: false
+            staple: false,
+            dishes: []
           });
         }
         const row = map.get(key);
+        if (!row.dishes.includes(dish)) row.dishes.push(dish);
         row.total += (Number(ing.per) || 0) * scale;
         row.uses += 1;
         if (!row.days.includes(d.label)) row.days.push(d.label);
@@ -655,8 +693,119 @@ function aggregate(menuByDay) {
     if (!!a.handPick !== !!b.handPick) return a.handPick ? 1 : -1;
     return a.name.localeCompare(b.name, "ja");
   });
-  loadManualItems().forEach(m => items.push(manualRow(m)));
-  return { items, unknown };
+  // この献立での修正（削除・名前・量）を反映
+  currentPlanSig = planSignature(menuByDay);
+  const ed = getPlanEdits(currentPlanSig);
+  const head = getHeadCount();
+  const kept = [];
+  items.forEach(it => {
+    it.orig = it.name;
+    it.autoName = it.name;
+    it.autoQty = it.qty;
+    if (ed.removed[it.orig]) return;
+    if (ed.rename[it.orig]) it.name = ed.rename[it.orig];
+    const q = ed.qty[it.orig];
+    if (q && q.head === head) it.qty = q.q;
+    it.edited = it.name !== it.autoName || it.qty !== it.autoQty;
+    kept.push(it);
+  });
+  loadManualItems().forEach(m => kept.push(manualRow(m)));
+  return { items: kept, unknown };
+}
+
+// ---- この献立での修正（削除・名前変更・量変更） ----
+let currentPlanSig = "";
+function planSignature(menuByDay) {
+  return DAYS.map(d => parseDishes((menuByDay || {})[d.key] || "").join(",")).join("|");
+}
+function loadAllEdits() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY + "-edits") || "null");
+    if (raw && typeof raw === "object" && raw.plans) return raw;
+  } catch (e) {}
+  return { order: [], plans: {} };
+}
+function getPlanEdits(sig) {
+  const all = loadAllEdits();
+  const p = all.plans[sig] || {};
+  return { removed: p.removed || {}, rename: p.rename || {}, qty: p.qty || {} };
+}
+function savePlanEdits(sig, ed) {
+  const all = loadAllEdits();
+  const empty = !Object.keys(ed.removed).length && !Object.keys(ed.rename).length && !Object.keys(ed.qty).length;
+  all.order = (all.order || []).filter(k => k !== sig);
+  if (empty) {
+    delete all.plans[sig];
+  } else {
+    all.plans[sig] = ed;
+    all.order.push(sig);
+    while (all.order.length > 12) delete all.plans[all.order.shift()];
+  }
+  localStorage.setItem(STORE_KEY + "-edits", JSON.stringify(all));
+}
+function renderRemovedBox() {
+  const box = document.getElementById("removedBox");
+  const ul = document.getElementById("removedList");
+  if (!box) return;
+  const ed = getPlanEdits(currentPlanSig);
+  const names = Object.keys(ed.removed);
+  const hasEdits = names.length || Object.keys(ed.rename).length || Object.keys(ed.qty).length;
+  box.hidden = !hasEdits;
+  document.getElementById("removedCount").textContent = names.length;
+  ul.innerHTML = "";
+  names.forEach(orig => {
+    const r = ed.removed[orig] || {};
+    const li = document.createElement("li");
+    const where = r.dishes && r.dishes.length ? `（${r.dishes.join("・")}）` : "";
+    const mm = r.master && r.master.length ? " ※レシピからも外しました" : "";
+    li.innerHTML = `<span>${escHtml(orig)}<small class="orig-name">${escHtml(where + mm)}</small></span>`;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "secondary";
+    b.textContent = "元に戻す";
+    b.dataset.restore = orig;
+    li.appendChild(b);
+    ul.appendChild(li);
+  });
+}
+function restoreMasterBackup(list) {
+  (list || []).forEach(({ dish, ing }) => {
+    if (!dish || !ing) return;
+    if (!master[dish]) master[dish] = [];
+    if (!master[dish].some(x => x.name === ing.name)) master[dish].push(ing);
+  });
+  if (list && list.length) {
+    saveMaster(master);
+    document.getElementById("masterEdit").value = JSON.stringify(master, null, 2);
+    buildManualDatalist();
+  }
+}
+function restoreRemoved(orig) {
+  const ed = getPlanEdits(currentPlanSig);
+  const r = ed.removed[orig];
+  if (!r) return;
+  restoreMasterBackup(r.master);
+  delete ed.removed[orig];
+  savePlanEdits(currentPlanSig, ed);
+  refreshListKeepingEdits();
+}
+function resetPlanEdits() {
+  const ed = getPlanEdits(currentPlanSig);
+  Object.values(ed.removed).forEach(r => restoreMasterBackup(r && r.master));
+  savePlanEdits(currentPlanSig, { removed: {}, rename: {}, qty: {} });
+  renderList(aggregate(readMenuForPlan()));
+}
+function refreshListKeepingEdits() {
+  syncQtyFromInputs();
+  renderList(aggregate(readMenuForPlan()));
+}
+// 表示中のリストの献立（保存済みの献立）。メニュー欄を書きかけでも、リストの基準は変えない
+function readMenuForPlan() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY + "-menu") || "null");
+    if (saved) return saved;
+  } catch (e) {}
+  return readMenu();
 }
 
 function escHtml(v) {
@@ -704,6 +853,7 @@ function manualRow(m) {
     fromMenu: false,
     staple: false,
     manual: true,
+    orig: m.name,
     qty: m.qty || "要確認",
     usesLabel: "追加",
     note: "自分で追加"
@@ -808,14 +958,18 @@ function renderList(result) {
     const chips = item.days.map(d => `<span class="chip">${d}</span>`).join("");
     const stapleChip = item.staple ? `<span class="chip staple">定番</span>` : "";
     const manualChip = item.manual ? `<span class="chip manual">追加</span>` : "";
+    const editedChip = item.edited ? `<span class="chip edited">修正</span>` : "";
+    const origNote = (!item.manual && item.autoName && item.name !== item.autoName)
+      ? `<small class="orig-name">元: ${escHtml(item.autoName)}</small>` : "";
     tr.innerHTML = `
-      <td>${escHtml(item.name)}${stapleChip ? " " + stapleChip : ""}</td>
+      <td><input class="nm" data-i="${idx}" value="${escHtml(item.name)}" aria-label="材料名">${origNote}${stapleChip ? " " + stapleChip : ""}${editedChip ? " " + editedChip : ""}</td>
       <td class="uses-cell">${escHtml(item.usesLabel)}</td>
       <td><input class="qty" data-i="${idx}" value="${escHtml(item.qty)}"></td>
       <td>${chips || manualChip || (item.handPick ? '<span class="chip">手選び</span>' : "")}</td>
       <td><button type="button" class="ghost" data-del="${idx}" style="width:auto;padding:6px 10px">削除</button></td>`;
     body.appendChild(tr);
   });
+  renderRemovedBox();
 }
 
 function readMenu() {
@@ -827,6 +981,7 @@ function readMenu() {
 }
 
 function makeList() {
+  if (!document.getElementById("screenList").hidden) syncQtyFromInputs();
   saveHeadcount();
   saveStapleChecks();
   const result = aggregate(readMenu());
@@ -839,15 +994,34 @@ function syncQtyFromInputs() {
     const i = Number(inp.dataset.i);
     if (currentItems[i]) currentItems[i].qty = inp.value.trim();
   });
+  document.querySelectorAll("#listBody input.nm").forEach(inp => {
+    const i = Number(inp.dataset.i);
+    const v = inp.value.trim();
+    if (currentItems[i] && v) currentItems[i].name = v;
+  });
   const manual = loadManualItems();
   let changed = false;
   currentItems.forEach(it => {
     if (!it.manual) return;
-    const m = manual.find(x => x.name === it.name);
+    const key = it.orig || it.name;
+    const m = manual.find(x => x.name === key);
     const q = it.qty === "要確認" ? "" : it.qty;
     if (m && m.qty !== q) { m.qty = q; changed = true; }
+    if (m && m.name !== it.name) { m.name = it.name; changed = true; }
+    it.orig = it.name;
   });
   if (changed) saveManualItems(manual);
+  // 自動で出た材料の修正を、この献立の修正として保存
+  if (currentPlanSig !== undefined && currentItems.some(it => !it.manual && it.orig)) {
+    const ed = getPlanEdits(currentPlanSig);
+    const head = getHeadCount();
+    currentItems.forEach(it => {
+      if (it.manual || !it.orig) return;
+      if (it.name && it.name !== it.autoName) ed.rename[it.orig] = it.name; else delete ed.rename[it.orig];
+      if (it.qty !== it.autoQty) ed.qty[it.orig] = { q: it.qty, head }; else delete ed.qty[it.orig];
+    });
+    savePlanEdits(currentPlanSig, ed);
+  }
 }
 
 function fillPrint() {
@@ -1098,9 +1272,41 @@ document.getElementById("listBody").addEventListener("click", e => {
   const removed = currentItems[i];
   if (removed && removed.manual) {
     saveManualItems(loadManualItems().filter(m => m.name !== removed.name));
+  } else if (removed && removed.orig) {
+    const ed = getPlanEdits(currentPlanSig);
+    const rec = { dishes: (removed.dishes || []).slice(), master: [] };
+    if (document.getElementById("delFromMaster").checked && rec.dishes.length) {
+      rec.dishes.forEach(dish => {
+        const recipe = master[dish];
+        if (!recipe) return;
+        const idx = recipe.findIndex(x => x.name === removed.orig);
+        if (idx >= 0) {
+          rec.master.push({ dish, ing: recipe[idx] });
+          recipe.splice(idx, 1);
+        }
+      });
+      if (rec.master.length) {
+        saveMaster(master);
+        document.getElementById("masterEdit").value = JSON.stringify(master, null, 2);
+      }
+    }
+    ed.removed[removed.orig] = rec;
+    delete ed.rename[removed.orig];
+    delete ed.qty[removed.orig];
+    savePlanEdits(currentPlanSig, ed);
   }
   currentItems.splice(i, 1);
   renderList({ items: currentItems, unknown: [] });
+});
+document.getElementById("listBody").addEventListener("change", e => {
+  if (e.target.matches("input.qty, input.nm")) syncQtyFromInputs();
+});
+document.getElementById("removedList").addEventListener("click", e => {
+  const b = e.target.closest("[data-restore]");
+  if (b) restoreRemoved(b.dataset.restore);
+});
+document.getElementById("btnResetEdits").addEventListener("click", () => {
+  if (confirm("この献立で直した内容（削除・名前・量）をすべて元に戻しますか？")) resetPlanEdits();
 });
 
 document.getElementById("headCount").addEventListener("change", saveHeadcount);
@@ -1163,7 +1369,7 @@ document.getElementById("manualQty").addEventListener("keydown", e => {
 });
 buildManualDatalist();
 // 自分で追加した材料があれば、開き直したときもリストを出しておく
-if (loadManualItems().length) {
+if (loadManualItems().length || loadAllEdits().plans[planSignature(readMenu())]) {
   renderList(aggregate(readMenu()));
 }
 </script>
