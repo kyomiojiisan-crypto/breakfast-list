@@ -134,6 +134,17 @@
     accent-color: var(--accent);
   }
   .uses-cell { font-weight: 600; white-space: nowrap; }
+  /* 自分で材料を追加 */
+  .manual-add { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+  .manual-add .full { grid-column: 1 / -1; }
+  .manual-add label.inline { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); font-size: .9rem; }
+  .manual-add label.inline input { width: auto; margin: 0; accent-color: var(--accent); }
+  .chip.manual { background: #e7eef8; color: #274a78; }
+  .staple-grid .custom-staple { position: relative; }
+  .staple-grid .custom-staple button {
+    width: auto; padding: 2px 8px; margin-left: auto; font-size: .75rem;
+    background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+  }
   @media print {
     body { background: #fff; }
     header, .no-print, details { display: none !important; }
@@ -208,6 +219,28 @@
       <button type="button" id="btnPrint">印刷・PDF用に開く</button>
       <button type="button" class="secondary" id="btnCopy">文字でコピー</button>
     </div>
+  </section>
+
+  <section class="no-print" id="manualAddSection" data-feature="manual-add">
+    <h2>自分で材料を追加</h2>
+    <p class="hint">候補にない材料も買い物リストに足せます。量は空でもOK（「要確認」になります）。</p>
+    <div class="manual-add">
+      <div>
+        <label for="manualName">材料名</label>
+        <input type="text" id="manualName" list="manualNameList" placeholder="例: 青のり" autocomplete="off" enterkeyhint="next">
+        <datalist id="manualNameList"></datalist>
+      </div>
+      <div>
+        <label for="manualQty">量</label>
+        <input type="text" id="manualQty" placeholder="例: 2袋" autocomplete="off" enterkeyhint="done">
+      </div>
+      <label class="inline full" for="manualRemember">
+        <input type="checkbox" id="manualRemember" checked>
+        次回も候補に出す（下の「よく買う食材」に追加）
+      </label>
+      <button type="button" id="btnManualAdd" class="full">追加</button>
+    </div>
+    <p id="manualStatus" class="status" hidden></p>
   </section>
 
   <section class="no-print" id="stapleSection">
@@ -448,7 +481,8 @@ function buildStapleUI() {
   const grid = document.getElementById("stapleGrid");
   const saved = loadStapleChecks();
   grid.innerHTML = "";
-  STAPLE_ITEMS.forEach((name, i) => {
+  const custom = (typeof loadCustomStaples === "function") ? loadCustomStaples() : [];
+  allStapleNames().forEach((name, i) => {
     const id = "staple-" + i;
     const label = document.createElement("label");
     label.htmlFor = id;
@@ -460,6 +494,20 @@ function buildStapleUI() {
     cb.addEventListener("change", saveStapleChecks);
     label.appendChild(cb);
     label.appendChild(document.createTextNode(name));
+    if (custom.includes(name) && !STAPLE_ITEMS.includes(name)) {
+      label.className = "custom-staple";
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.textContent = "×";
+      rm.title = "候補から外す";
+      rm.setAttribute("aria-label", name + "を候補から外す");
+      rm.addEventListener("click", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm(`「${name}」を候補から外しますか？`)) removeCustomStaple(name);
+      });
+      label.appendChild(rm);
+    }
     grid.appendChild(label);
   });
 }
@@ -560,7 +608,8 @@ function aggregate(menuByDay) {
   });
 
   // merge checked staples
-  const checked = getCheckedStaples();
+  const manualNames = new Set(loadManualItems().map(m => m.name));
+  const checked = getCheckedStaples().filter(n => !manualNames.has(n));
   checked.forEach(name => {
     if (map.has(name)) {
       map.get(name).staple = true;
@@ -606,7 +655,131 @@ function aggregate(menuByDay) {
     if (!!a.handPick !== !!b.handPick) return a.handPick ? 1 : -1;
     return a.name.localeCompare(b.name, "ja");
   });
+  loadManualItems().forEach(m => items.push(manualRow(m)));
   return { items, unknown };
+}
+
+function escHtml(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+// ---- 自分で追加した材料（手入力） ----
+function loadManualItems() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY + "-manual") || "[]");
+    return Array.isArray(raw) ? raw.filter(x => x && x.name) : [];
+  } catch (e) {
+    return [];
+  }
+}
+function saveManualItems(list) {
+  localStorage.setItem(STORE_KEY + "-manual", JSON.stringify(list));
+}
+function loadCustomStaples() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY + "-customStaples") || "[]");
+    return Array.isArray(raw) ? raw.filter(x => typeof x === "string" && x) : [];
+  } catch (e) {
+    return [];
+  }
+}
+function saveCustomStaples(list) {
+  localStorage.setItem(STORE_KEY + "-customStaples", JSON.stringify(list));
+}
+function allStapleNames() {
+  const out = STAPLE_ITEMS.slice();
+  loadCustomStaples().forEach(n => { if (!out.includes(n)) out.push(n); });
+  return out;
+}
+function manualRow(m) {
+  return {
+    name: m.name,
+    unit: "",
+    total: 0,
+    uses: 0,
+    days: [],
+    packHint: "",
+    fromMenu: false,
+    staple: false,
+    manual: true,
+    qty: m.qty || "要確認",
+    usesLabel: "追加",
+    note: "自分で追加"
+  };
+}
+function setManualStatus(msg, kind) {
+  const el = document.getElementById("manualStatus");
+  el.hidden = !msg;
+  el.textContent = msg || "";
+  el.className = "status" + (kind ? " " + kind : "");
+}
+function buildManualDatalist() {
+  const dl = document.getElementById("manualNameList");
+  if (!dl) return;
+  dl.innerHTML = "";
+  const names = new Set(allStapleNames());
+  Object.values(master || {}).forEach(r => (r || []).forEach(i => i && i.name && names.add(i.name)));
+  [...names].sort((a, b) => a.localeCompare(b, "ja")).forEach(n => {
+    const o = document.createElement("option");
+    o.value = n;
+    dl.appendChild(o);
+  });
+}
+function addManualItem() {
+  const nameEl = document.getElementById("manualName");
+  const qtyEl = document.getElementById("manualQty");
+  const name = nameEl.value.trim();
+  const qty = qtyEl.value.trim();
+  if (!name) {
+    setManualStatus("材料名を入れてください。", "err");
+    nameEl.focus();
+    return;
+  }
+  const list = loadManualItems();
+  const existing = list.find(m => m.name === name);
+  if (existing) {
+    existing.qty = qty || existing.qty || "";
+  } else {
+    list.push({ name, qty });
+  }
+  saveManualItems(list);
+
+  if (document.getElementById("manualRemember").checked) {
+    const cs = loadCustomStaples();
+    if (!STAPLE_ITEMS.includes(name) && !cs.includes(name)) {
+      cs.push(name);
+      saveCustomStaples(cs);
+      saveStapleChecks();
+      buildStapleUI();
+      buildManualDatalist();
+    }
+  }
+
+  const section = document.getElementById("screenList");
+  if (section.hidden) {
+    makeList();
+  } else {
+    syncQtyFromInputs();
+    const idx = currentItems.findIndex(i => i.manual && i.name === name);
+    const row = manualRow(existing || { name, qty });
+    if (idx >= 0) currentItems[idx] = row; else currentItems.push(row);
+    renderList({ items: currentItems, unknown: [] });
+  }
+  nameEl.value = "";
+  qtyEl.value = "";
+  setManualStatus(`「${name}」を買い物リストに追加しました。`, "ok");
+  nameEl.focus();
+}
+function removeCustomStaple(name) {
+  saveStapleChecks();
+  saveCustomStaples(loadCustomStaples().filter(n => n !== name));
+  const checks = loadStapleChecks();
+  delete checks[name];
+  localStorage.setItem(STORE_KEY + "-staples", JSON.stringify(checks));
+  buildStapleUI();
+  buildManualDatalist();
 }
 
 let master = loadMaster();
@@ -634,11 +807,12 @@ function renderList(result) {
     const tr = document.createElement("tr");
     const chips = item.days.map(d => `<span class="chip">${d}</span>`).join("");
     const stapleChip = item.staple ? `<span class="chip staple">定番</span>` : "";
+    const manualChip = item.manual ? `<span class="chip manual">追加</span>` : "";
     tr.innerHTML = `
-      <td>${item.name}${stapleChip ? " " + stapleChip : ""}</td>
-      <td class="uses-cell">${item.usesLabel}</td>
-      <td><input class="qty" data-i="${idx}" value="${item.qty}"></td>
-      <td>${chips || (item.handPick ? '<span class="chip">手選び</span>' : "")}</td>
+      <td>${escHtml(item.name)}${stapleChip ? " " + stapleChip : ""}</td>
+      <td class="uses-cell">${escHtml(item.usesLabel)}</td>
+      <td><input class="qty" data-i="${idx}" value="${escHtml(item.qty)}"></td>
+      <td>${chips || manualChip || (item.handPick ? '<span class="chip">手選び</span>' : "")}</td>
       <td><button type="button" class="ghost" data-del="${idx}" style="width:auto;padding:6px 10px">削除</button></td>`;
     body.appendChild(tr);
   });
@@ -665,6 +839,15 @@ function syncQtyFromInputs() {
     const i = Number(inp.dataset.i);
     if (currentItems[i]) currentItems[i].qty = inp.value.trim();
   });
+  const manual = loadManualItems();
+  let changed = false;
+  currentItems.forEach(it => {
+    if (!it.manual) return;
+    const m = manual.find(x => x.name === it.name);
+    const q = it.qty === "要確認" ? "" : it.qty;
+    if (m && m.qty !== q) { m.qty = q; changed = true; }
+  });
+  if (changed) saveManualItems(manual);
 }
 
 function fillPrint() {
@@ -680,7 +863,7 @@ function fillPrint() {
   currentItems.forEach(item => {
     const tr = document.createElement("tr");
     const memo = item.note || "";
-    tr.innerHTML = `<td>☐</td><td>${item.name}</td><td>${item.usesLabel}</td><td>${item.qty}</td><td>${memo}</td>`;
+    tr.innerHTML = `<td>☐</td><td>${escHtml(item.name)}</td><td>${escHtml(item.usesLabel)}</td><td>${escHtml(item.qty)}</td><td>${escHtml(memo)}</td>`;
     body.appendChild(tr);
   });
 }
@@ -912,6 +1095,10 @@ document.getElementById("listBody").addEventListener("click", e => {
   if (!btn) return;
   const i = Number(btn.dataset.del);
   syncQtyFromInputs();
+  const removed = currentItems[i];
+  if (removed && removed.manual) {
+    saveManualItems(loadManualItems().filter(m => m.name !== removed.name));
+  }
   currentItems.splice(i, 1);
   renderList({ items: currentItems, unknown: [] });
 });
@@ -940,6 +1127,7 @@ document.getElementById("btnSaveMaster").onclick = () => {
     master = JSON.parse(document.getElementById("masterEdit").value);
     saveMaster(master);
     buildMenuUI();
+    buildManualDatalist();
     updateOcrMatchedHint();
     alert("保存しました");
   } catch (e) {
@@ -965,6 +1153,19 @@ try {
     });
   }
 } catch (e) {}
+
+document.getElementById("btnManualAdd").addEventListener("click", addManualItem);
+document.getElementById("manualName").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); document.getElementById("manualQty").focus(); }
+});
+document.getElementById("manualQty").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); addManualItem(); }
+});
+buildManualDatalist();
+// 自分で追加した材料があれば、開き直したときもリストを出しておく
+if (loadManualItems().length) {
+  renderList(aggregate(readMenu()));
+}
 </script>
 </body>
 </html>
