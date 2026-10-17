@@ -93,6 +93,34 @@
   #removedBox li span { flex: 1; }
   #removedBox li button, #btnResetEdits { width: auto; padding: 6px 10px; font-size: .85rem; }
   .list-opts label.inline { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--ink); font-size: .85rem; }
+  /* 定番メニュー */
+  .main-menu { border: 2px solid var(--accent); }
+  .main-menu h2 { font-size: 1.1rem; }
+  .day-pick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 6px 0 8px; }
+  .day-pick button { padding: 10px 0; background: #ece7df; color: var(--ink); }
+  .day-pick button.on { background: var(--accent); color: #fff; }
+  .day-pick button .n { display: block; font-size: .7rem; font-weight: 400; }
+  .std-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; margin-bottom: 10px; }
+  .std-grid button { padding: 9px 6px; font-size: .86rem; font-weight: 600; background: #fff; color: var(--ink); border: 1px solid var(--line); line-height: 1.25; }
+  .std-grid button.on { background: #fbe9dc; border-color: var(--accent); color: var(--accent); }
+  .std-grid button.taught { border-style: dashed; }
+  .row.active .day { color: var(--accent); }
+  .row.active input { border-color: var(--accent); }
+  .dish-preview { margin: -4px 0 10px 96px; font-size: .8rem; color: var(--muted); }
+  .dish-preview button { width: auto; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: .8rem; font-weight: 400; background: #f6f1ea; color: var(--ink); border: 1px solid var(--line); border-radius: 999px; }
+  .dish-preview button.unk { background: #fff1e8; color: #9a3412; border-color: #f0c3a6; }
+  .head-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .head-row label { margin: 0; font-size: .95rem; color: var(--ink); font-weight: 600; }
+  .head-row input { width: 90px; }
+  .recipe-editor { margin-top: 12px; border: 1px solid #e3b896; background: #fffaf5; border-radius: 10px; padding: 10px; }
+  .recipe-editor h3 { margin: 0 0 4px; font-size: 1rem; }
+  table.recipe-table td, table.recipe-table th { padding: 4px 3px; }
+  table.recipe-table input, table.recipe-table select { padding: 7px 6px; }
+  table.recipe-table td:nth-child(2) { width: 22%; }
+  table.recipe-table td:nth-child(3) { width: 24%; }
+  table.recipe-table td:nth-child(4) { width: 52px; }
+  table.recipe-table td button { width: auto; padding: 6px 8px; font-size: .8rem; }
+  @media (max-width: 400px) { .dish-preview { margin-left: 0; } }
   /* 汁物 */
   .soup-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; background: #fffdf9; }
   .soup-head { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; align-items: end; }
@@ -219,49 +247,44 @@
   <p class="sub">買うのは朝食とお汁の具だけ（昼・夕は対象外）</p>
 </header>
 <main>
-  <section class="no-print">
-    <h2>人数</h2>
-    <label for="headCount">人数（買い物量の基準・既定18）</label>
-    <input type="number" id="headCount" min="1" step="1" value="18" inputmode="numeric">
-    <p class="hint">ゼリー等は頭の中で調整してください。買い物量はこの人数÷18で増減します。</p>
-  </section>
-
-  <section class="no-print">
-    <h2>朝食メニューの写真から読む</h2>
-    <p class="hint">メニュー表は朝食の欄だけ写して撮ってください。昼・夕が入ると誤読しやすいです。初回だけネットが必要です。</p>
-    <input type="file" id="menuPhotoAlbum" class="visually-hidden" accept="image/*" tabindex="-1">
-    <input type="file" id="menuPhotoCamera" class="visually-hidden" accept="image/*" capture="environment" tabindex="-1">
-    <div class="btns" style="margin-top:0">
-      <button type="button" id="btnPhotoCamera">写真を撮る</button>
-      <button type="button" class="secondary" id="btnPhotoAlbum">アルバムから選ぶ</button>
-    </div>
-    <p id="ocrStatus" class="status" hidden></p>
-    <p class="hint">うまく読めない・オフラインのときは、Googleレンズ等で文字をコピーしてメニュー欄に貼ってもよい。</p>
-    <div id="ocrResultBox">
-      <label for="ocrLines">読み取り結果（編集可・1行1料理または日付つき）</label>
-      <textarea id="ocrLines" rows="8" placeholder="例:&#10;月 卵焼き、味噌汁&#10;火 肉じゃが"></textarea>
-      <p id="ocrMatchedHint" class="hint"></p>
-      <div class="btns">
-        <button type="button" id="btnOcrToMenu">読み取った料理を下のメニューに入れる</button>
-        <button type="button" class="secondary" id="btnOcrRematch">候補を再照合</button>
-      </div>
-    </div>
-  </section>
-
-  <section class="no-print">
+  <section class="no-print main-menu" id="menuSection" data-feature="standard-menu">
     <h2>1. 今週の朝食メニュー</h2>
-    <p class="hint">朝食の料理名だけ入れてください（味噌汁などのお汁の具も含む）。昼・夕は買いません。候補から選んでも手打ちでも可。</p>
+    <p class="hint">①曜日を選ぶ → ②下の定番メニューをタップ（もう一度タップで外す）。手で打ってもOK。材料は自動で出ます。</p>
+    <div class="day-pick" id="dayPick"></div>
+    <div class="std-grid" id="stdMenus"></div>
     <div id="menuDays"></div>
+    <div class="head-row">
+      <label for="headCount">人数</label>
+      <input type="number" id="headCount" min="1" step="1" value="18" inputmode="numeric">
+      <span class="hint">人分（既定18）</span>
+    </div>
     <div class="btns">
       <button type="button" id="btnMake">書き出す</button>
       <button type="button" class="secondary" id="btnSample">例を入れる</button>
       <button type="button" class="ghost" id="btnClear">メニューを消す</button>
     </div>
-    <p class="hint">「書き出す」で、上の人数ぶんの買い物リストが出ます（既定18人）。材料ごとに何回使うか（回数）も出ます。</p>
+    <p class="hint">「書き出す」で人数ぶんの買い物リストが出ます。料理名をタップすると、その料理の材料を直して<b>覚えさせる</b>ことができます（次からその材料で出ます）。</p>
+    <div id="recipeEditor" class="recipe-editor" hidden data-feature="recipe-teach">
+      <h3 id="recipeTitle">料理の材料</h3>
+      <p class="hint">量は<b>18人・1回分</b>の目安です（人数に合わせて自動で増減）。わからなければ空欄でOK（リストで「要確認」）。</p>
+      <table class="recipe-table">
+        <thead><tr><th>材料</th><th>量</th><th>単位</th><th></th></tr></thead>
+        <tbody id="recipeRows"></tbody>
+      </table>
+      <div class="btns">
+        <button type="button" class="secondary" id="btnRecipeAddRow" style="width:auto">＋材料を足す</button>
+      </div>
+      <div class="btns">
+        <button type="button" id="btnRecipeSave">この料理の材料を覚えさせる</button>
+        <button type="button" class="ghost" id="btnRecipeDefault" style="width:auto">最初の材料に戻す</button>
+        <button type="button" class="secondary" id="btnRecipeClose" style="width:auto">閉じる</button>
+      </div>
+      <p id="recipeStatus" class="status" hidden></p>
+    </div>
   </section>
 
   <section class="no-print" id="soupSection" data-feature="soup">
-    <h2>1-2. 汁物（日数と具）</h2>
+    <h2>2. 汁物（日数と具）</h2>
     <p class="hint">①汁物ごとに作る日数を入れる → ②入れたい具を選ぶ（いくつでも） → ③選んだ具を日ごとに順番に割り当てます（1日に入れる具は既定2つ・1〜3で変更可）。日ごとの具は下の表で直せます。</p>
     <p class="hint" data-feature="soup-rotation"><b>計算のしかた：</b>具ごとの量 ＝ その具を使う日数 × 1人分 × 人数。調味料（味噌・だし等）＝ 日数 × 1人分 × 人数。日数はいつも<b>ここに入力した日数</b>で計算します。</p>
     <div id="soupRows"></div>
@@ -295,7 +318,7 @@
   </section>
 
   <section id="screenList" class="no-print" hidden>
-    <h2>2. 買い物リスト</h2>
+    <h2>3. 買い物リスト</h2>
     <p class="hint">回数はメニューでその材料を使う回数です。目安の量は人数から出しています。量が不確かでも回数は役に立ちます。店の人に渡す前に数字を直してください。</p>
     <div id="unknownBox" hidden></div>
     <div id="soupInfo" hidden></div>
@@ -349,6 +372,29 @@
     <h2>よく買う食材（手でチェック）</h2>
     <p class="hint">補助リストです。初回はここで定番にチェックしておくと毎週楽。書き出し時、メニューにない定番は回数「手選び」で追加されます（量は要確認）。</p>
     <div class="staple-grid" id="stapleGrid"></div>
+  </section>
+
+  <section class="no-print" id="ocrSection">
+    <h2>写真から読む（お試し）</h2>
+    <p class="hint"><b>お試し機能です。</b>ふだんは上の「1. 今週の朝食メニュー」で料理を選ぶ方が確実です。</p>
+    <p class="hint">メニュー表は朝食の欄だけ写して撮ってください。昼・夕が入ると誤読しやすいです。初回だけネットが必要です。</p>
+    <input type="file" id="menuPhotoAlbum" class="visually-hidden" accept="image/*" tabindex="-1">
+    <input type="file" id="menuPhotoCamera" class="visually-hidden" accept="image/*" capture="environment" tabindex="-1">
+    <div class="btns" style="margin-top:0">
+      <button type="button" id="btnPhotoCamera">写真を撮る</button>
+      <button type="button" class="secondary" id="btnPhotoAlbum">アルバムから選ぶ</button>
+    </div>
+    <p id="ocrStatus" class="status" hidden></p>
+    <p class="hint">うまく読めない・オフラインのときは、Googleレンズ等で文字をコピーしてメニュー欄に貼ってもよい。</p>
+    <div id="ocrResultBox">
+      <label for="ocrLines">読み取り結果（編集可・1行1料理または日付つき）</label>
+      <textarea id="ocrLines" rows="8" placeholder="例:&#10;月 卵焼き、味噌汁&#10;火 肉じゃが"></textarea>
+      <p id="ocrMatchedHint" class="hint"></p>
+      <div class="btns">
+        <button type="button" id="btnOcrToMenu">読み取った料理をメニューに入れる</button>
+        <button type="button" class="secondary" id="btnOcrRematch">候補を再照合</button>
+      </div>
+    </div>
   </section>
 
   <section class="no-print">
@@ -514,8 +560,49 @@ const DEFAULT_MASTER = {
   "お吸い物": [
     { name: "三つ葉", unit: "束", per: 0.3 },
     { name: "かまぼこ", unit: "本", per: 0.3 }
+  ],
+  // ↓ 定番メニュー用に追加（材料はできるだけ少なく。量は18人・1回分の目安）
+  "卵のふんわり焼き": [
+    { name: "卵", unit: "個", per: 18 }
+  ],
+  "ウインナーのソテー": [
+    { name: "ウインナー", unit: "本", per: 18 }
+  ],
+  "目玉焼き": [
+    { name: "卵", unit: "個", per: 18 }
+  ],
+  "ハムエッグ": [
+    { name: "卵", unit: "個", per: 18 },
+    { name: "ハム", unit: "枚", per: 18 }
+  ],
+  "冷奴": [
+    { name: "豆腐", unit: "丁", per: 3 }
+  ],
+  "厚揚げの煮物": [
+    { name: "厚揚げ", unit: "枚", per: 4 }
+  ],
+  "野菜炒め": [
+    { name: "キャベツ", unit: "枚", per: 6 },
+    { name: "もやし", unit: "袋", per: 1 }
+  ],
+  "ロールパン": [
+    { name: "ロールパン", unit: "個", per: 18 }
+  ],
+  "中華スープ": [
+    { name: "卵", unit: "個", per: 3 },
+    { name: "ねぎ", unit: "本", per: 0.3 }
   ]
 };
+// よく使う定番メニュー（30品）。画面の上で、タップで選べます
+const STANDARD_MENUS = [
+  "卵のふんわり焼き", "卵焼き", "目玉焼き", "スクランブルエッグ", "ハムエッグ",
+  "ウインナーのソテー", "ボイルウインナー", "鮭の塩焼き", "煮魚", "冷奴",
+  "納豆ご飯", "厚揚げの煮物", "肉じゃが", "かぼちゃの煮付け", "きんぴらごぼう",
+  "ほうれん草のおひたし", "もやし炒め", "野菜炒め", "サラダ", "トースト",
+  "ロールパン", "ホットケーキ", "お茶漬け", "ヨーグルト", "バナナ",
+  "フルーツ", "味噌汁", "すまし汁", "中華スープ", "野菜スープ"
+];
+const SEED_VERSION = 2;
 
 const STORE_KEY = "kaimono-kakidashi-v1";
 const DAY_LABEL_RE = /([月火水木金土日])(?:曜(?:日)?)?/;
@@ -637,9 +724,17 @@ function buildMenuUI() {
     row.innerHTML = `<div class="day">${d.label}</div>
       <input list="dishList" data-day="${d.key}" placeholder="例: 肉じゃが、味噌汁" autocomplete="off">`;
     box.appendChild(row);
+    const prev = document.createElement("div");
+    prev.className = "dish-preview";
+    prev.dataset.prev = d.key;
+    box.appendChild(prev);
     const inp = row.querySelector("input");
     if (saved[d.key]) inp.value = saved[d.key];
   });
+  if (typeof renderStdMenus === "function" && document.getElementById("stdMenus")) {
+    renderStdMenus();
+    updateMenuPreview();
+  }
 }
 
 function parseDishes(text) {
@@ -767,7 +862,7 @@ function aggregate(menuByDay) {
       usesLabel = "手選び";
       note = "定番・量は要確認";
     } else {
-      qty = formatQty(r.name, r.unit, r.total, r.uses, r.packHint);
+      qty = (r.total === 0 && !r.packHint) ? "要確認" : formatQty(r.name, r.unit, r.total, r.uses, r.packHint);
       usesLabel = String(r.uses);
       if (r.packHint && r.total === 0) note = r.packHint;
       else if (r.uses >= 2) note = `${r.uses}回分`;
@@ -1152,6 +1247,134 @@ function readMenuForPlan() {
   return readMenu();
 }
 
+// ---- 定番メニュー（タップで選ぶ）と、料理の材料を覚えさせる ----
+let activeDay = "mon";
+const RECIPE_UNITS = ["個", "本", "玉", "袋", "パック", "丁", "枚", "切れ", "束", "缶", "g", "ml"];
+function menuDishesOf(dayKey) {
+  const inp = document.querySelector(`#menuDays input[data-day="${dayKey}"]`);
+  return inp ? parseDishes(inp.value) : [];
+}
+function setMenuDishes(dayKey, list) {
+  const inp = document.querySelector(`#menuDays input[data-day="${dayKey}"]`);
+  if (inp) inp.value = list.join("、");
+}
+function stdMenuList() {
+  const list = STANDARD_MENUS.filter(n => master[n]);
+  // 自分で覚えさせた（新しく作った）料理も後ろに並べる
+  Object.keys(master).forEach(n => {
+    if (!list.includes(n) && !DEFAULT_MASTER[n]) list.push(n);
+  });
+  return list;
+}
+function renderStdMenus() {
+  const pick = document.getElementById("dayPick");
+  pick.innerHTML = "";
+  DAYS.forEach(d => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.pickDay = d.key;
+    const n = menuDishesOf(d.key).length;
+    b.innerHTML = `${d.label}<span class="n">${n ? n + "品" : "—"}</span>`;
+    if (d.key === activeDay) b.classList.add("on");
+    pick.appendChild(b);
+  });
+  const grid = document.getElementById("stdMenus");
+  grid.innerHTML = "";
+  const cur = menuDishesOf(activeDay);
+  stdMenuList().forEach(name => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.std = name;
+    b.textContent = name;
+    if (cur.includes(name)) b.classList.add("on");
+    if (!DEFAULT_MASTER[name]) b.classList.add("taught");
+    grid.appendChild(b);
+  });
+  document.querySelectorAll("#menuDays .row").forEach(r => {
+    const inp = r.querySelector("input[data-day]");
+    r.classList.toggle("active", !!inp && inp.dataset.day === activeDay);
+  });
+}
+function updateMenuPreview() {
+  DAYS.forEach(d => {
+    const el = document.querySelector(`#menuDays .dish-preview[data-prev="${d.key}"]`);
+    if (!el) return;
+    const dishes = menuDishesOf(d.key);
+    el.innerHTML = dishes.map(dish => {
+      const r = master[dish];
+      if (!r) return `<button type="button" class="unk" data-edit-dish="${escHtml(dish)}">${escHtml(dish)}：材料を教える</button>`;
+      const ings = r.map(x => x.name).join("・") || "材料なし";
+      return `<button type="button" data-edit-dish="${escHtml(dish)}">${escHtml(dish)}：${escHtml(ings)}</button>`;
+    }).join("");
+  });
+}
+function toggleStdMenu(name) {
+  const list = menuDishesOf(activeDay);
+  const i = list.indexOf(name);
+  if (i >= 0) list.splice(i, 1); else list.push(name);
+  setMenuDishes(activeDay, list);
+  renderStdMenus();
+  updateMenuPreview();
+  renderSoupUI();
+}
+let editingDish = null;
+function recipeRowHtml(ing) {
+  const unitOpts = RECIPE_UNITS.map(u => `<option ${ing.unit === u ? "selected" : ""}>${u}</option>`).join("");
+  const extra = ing.unit && !RECIPE_UNITS.includes(ing.unit) ? `<option selected>${escHtml(ing.unit)}</option>` : "";
+  const per = Number(ing.per) > 0 ? ing.per : "";
+  return `<tr>
+    <td><input type="text" data-r="name" value="${escHtml(ing.name || "")}" placeholder="例: 卵" list="manualNameList"></td>
+    <td><input type="number" data-r="per" value="${escHtml(per)}" min="0" step="0.1" inputmode="decimal"></td>
+    <td><select data-r="unit">${extra}${unitOpts}</select></td>
+    <td><button type="button" class="ghost" data-r-del>消す</button></td>
+  </tr>`;
+}
+function openRecipeEditor(dish) {
+  editingDish = dish;
+  const box = document.getElementById("recipeEditor");
+  box.hidden = false;
+  document.getElementById("recipeTitle").textContent = `「${dish}」の材料${master[dish] ? "" : "（新しい料理）"}`;
+  const rows = (master[dish] && master[dish].length) ? master[dish] : [{ name: "", unit: "個", per: "" }];
+  document.getElementById("recipeRows").innerHTML = rows.map(recipeRowHtml).join("");
+  document.getElementById("btnRecipeDefault").hidden = !DEFAULT_MASTER[dish];
+  const st = document.getElementById("recipeStatus");
+  st.hidden = true;
+  box.scrollIntoView({ block: "center" });
+}
+function readRecipeEditor() {
+  const out = [];
+  const prevMap = {};
+  (master[editingDish] || []).forEach(x => { prevMap[x.name] = x; });
+  document.querySelectorAll("#recipeRows tr").forEach(tr => {
+    const name = tr.querySelector('[data-r="name"]').value.trim();
+    if (!name) return;
+    const per = Number(tr.querySelector('[data-r="per"]').value) || 0;
+    const unit = tr.querySelector('[data-r="unit"]').value;
+    const ing = { name, unit, per };
+    if (prevMap[name] && prevMap[name].packHint) ing.packHint = prevMap[name].packHint;
+    out.push(ing);
+  });
+  return out;
+}
+function afterMasterChanged() {
+  saveMaster(master);
+  document.getElementById("masterEdit").value = JSON.stringify(master, null, 2);
+  buildMenuUI();
+  buildManualDatalist();
+  updateOcrMatchedHint();
+  if (!document.getElementById("screenList").hidden) refreshListKeepingEdits();
+}
+function saveRecipeEditor() {
+  if (!editingDish) return;
+  const ings = readRecipeEditor();
+  master[editingDish] = ings;
+  afterMasterChanged();
+  const st = document.getElementById("recipeStatus");
+  st.hidden = false;
+  st.className = "status ok";
+  st.textContent = `「${editingDish}」の材料を覚えました（${ings.map(i => i.name).join("・") || "材料なし"}）。次からこの材料で出ます。`;
+}
+
 function escHtml(v) {
   return String(v == null ? "" : v).replace(/[&<>"']/g, c => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
@@ -1277,6 +1500,17 @@ function removeCustomStaple(name) {
 }
 
 let master = loadMaster();
+try {
+  const sv = Number(localStorage.getItem(STORE_KEY + "-seedv") || "1");
+  if (sv < SEED_VERSION) {
+    let added = false;
+    Object.keys(DEFAULT_MASTER).forEach(k => {
+      if (!master[k]) { master[k] = structuredClone(DEFAULT_MASTER[k]); added = true; }
+    });
+    if (added) saveMaster(master);
+    localStorage.setItem(STORE_KEY + "-seedv", String(SEED_VERSION));
+  }
+} catch (e) {}
 let currentItems = [];
 
 function renderList(result) {
@@ -1289,9 +1523,11 @@ function renderList(result) {
 
   if (result.unknown && result.unknown.length) {
     unknownBox.hidden = false;
-    unknownBox.innerHTML = `<p class="missing">マスターにない料理: ${
-      result.unknown.map(u => `${u.day}「${u.dish}」`).join("、")
-    }。下の材料マスターに追加するか、手でリストへ足してください。</p>`;
+    const uniq = [...new Set(result.unknown.map(u => u.dish))];
+    unknownBox.innerHTML = `<p class="missing">材料が登録されていない料理: ${
+      result.unknown.map(u => `${escHtml(u.day)}「${escHtml(u.dish)}」`).join("、")
+    }。ボタンから材料を教えると、次から自動で出ます。</p>` +
+      uniq.map(d => `<button type="button" class="secondary" data-teach="${escHtml(d)}" style="width:auto;margin:2px 4px 2px 0">「${escHtml(d)}」の材料を教える</button>`).join("");
   } else {
     unknownBox.hidden = true;
     unknownBox.innerHTML = "";
@@ -1594,9 +1830,11 @@ document.getElementById("btnSample").onclick = () => {
   document.querySelectorAll("#menuDays input[data-day]").forEach(inp => {
     inp.value = sample[inp.dataset.day] || "";
   });
+  renderStdMenus(); updateMenuPreview(); renderSoupUI();
 };
 document.getElementById("btnClear").onclick = () => {
   document.querySelectorAll("#menuDays input[data-day]").forEach(inp => { inp.value = ""; });
+  renderStdMenus(); updateMenuPreview(); renderSoupUI();
 };
 document.getElementById("btnPrint").onclick = () => {
   fillPrint();
@@ -1657,6 +1895,10 @@ document.getElementById("listBody").addEventListener("click", e => {
 });
 document.getElementById("listBody").addEventListener("change", e => {
   if (e.target.matches("input.qty, input.nm")) syncQtyFromInputs();
+});
+document.getElementById("unknownBox").addEventListener("click", e => {
+  const b = e.target.closest("[data-teach]");
+  if (b) openRecipeEditor(b.dataset.teach);
 });
 document.getElementById("removedList").addEventListener("click", e => {
   const b = e.target.closest("[data-restore]");
@@ -1727,6 +1969,50 @@ document.getElementById("manualQty").addEventListener("keydown", e => {
 });
 buildManualDatalist();
 renderSoupUI();
+renderStdMenus();
+updateMenuPreview();
+document.getElementById("dayPick").addEventListener("click", e => {
+  const b = e.target.closest("[data-pick-day]");
+  if (!b) return;
+  activeDay = b.dataset.pickDay;
+  renderStdMenus();
+});
+document.getElementById("stdMenus").addEventListener("click", e => {
+  const b = e.target.closest("[data-std]");
+  if (b) toggleStdMenu(b.dataset.std);
+});
+const menuDaysBox = document.getElementById("menuDays");
+menuDaysBox.addEventListener("focusin", e => {
+  if (e.target.matches("input[data-day]")) { activeDay = e.target.dataset.day; renderStdMenus(); }
+});
+menuDaysBox.addEventListener("input", () => { renderStdMenus(); updateMenuPreview(); });
+menuDaysBox.addEventListener("click", e => {
+  const b = e.target.closest("[data-edit-dish]");
+  if (b) openRecipeEditor(b.dataset.editDish);
+});
+document.getElementById("btnRecipeAddRow").addEventListener("click", () => {
+  document.getElementById("recipeRows").insertAdjacentHTML("beforeend", recipeRowHtml({ name: "", unit: "個", per: "" }));
+  const ins = document.querySelectorAll('#recipeRows [data-r="name"]');
+  ins[ins.length - 1].focus();
+});
+document.getElementById("recipeRows").addEventListener("click", e => {
+  const b = e.target.closest("[data-r-del]");
+  if (b) b.closest("tr").remove();
+});
+document.getElementById("btnRecipeSave").addEventListener("click", saveRecipeEditor);
+// 写真の読み取り結果をメニューに入れたあと、定番ボタンと材料の表示を更新（読み取り自体は変えない）
+document.getElementById("btnOcrToMenu").addEventListener("click", () => setTimeout(() => { renderStdMenus(); updateMenuPreview(); renderSoupUI(); }, 0));
+document.getElementById("btnRecipeClose").addEventListener("click", () => {
+  document.getElementById("recipeEditor").hidden = true;
+  editingDish = null;
+});
+document.getElementById("btnRecipeDefault").addEventListener("click", () => {
+  if (!editingDish || !DEFAULT_MASTER[editingDish]) return;
+  if (!confirm(`「${editingDish}」の材料を最初の内容に戻しますか？`)) return;
+  master[editingDish] = structuredClone(DEFAULT_MASTER[editingDish]);
+  afterMasterChanged();
+  openRecipeEditor(editingDish);
+});
 const soupBox = document.getElementById("soupRows");
 soupBox.addEventListener("click", e => {
   const card = e.target.closest(".soup-card");
